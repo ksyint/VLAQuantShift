@@ -1,0 +1,110 @@
+{
+  "evidence_type": "synthetic_integration_only",
+  "robotics_claim": false,
+  "source_commit": "95dd37a06edc99f7d0e96e58ab3cd02e679f1462",
+  "measurements": [
+    {
+      "label": "cpu",
+      "physical_gpu": null,
+      "episodes": 288,
+      "cells": 9,
+      "original_plan_sha256": "0e454f0b21461825e1e2c66d520cf66b92ff9659724822700b878463b00ec18d",
+      "archive_plan_sha256": "a4bf416645bd7512faca7130e9775e6959b4d1364090466bf95ca30702e60bf3",
+      "records": [
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+          "sha256": "ecca36c24c23d5c2561143f5fa5f59c8a7463a5e5cf59867b5fa12ac378a88c8"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/d3a3ce52bfc4ee2b.jsonl",
+          "sha256": "b673995eee4c46cc3ceaef9953c2446a94c05744ed583e0d34b2211aa37e9973"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/0bf3ea0ff9992ae1.jsonl",
+          "sha256": "d7a21d950552b171a4eb3a422fc96d10d63840f8ff4a567d39d8e4583b0c7d21"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/d24c88dac5759bf8.jsonl",
+          "sha256": "d413fe6ec41c39937332aab4cad34453ed077388ef96599d3a9e43a9ed4aa5e8"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/7e4a9b0873132468.jsonl",
+          "sha256": "c8e08e18a645cff60f7893aba57a3be4901e9fc466cc5aeed94dbca9a6878077"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/16737bb27152129b.jsonl",
+          "sha256": "05160b18fe70b5e042379bcf406483a11eba851b357d8eb7c5a5af83b68e7dba"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/65bc5c38eb812676.jsonl",
+          "sha256": "e8f5d06d91e65dd4aa214642289c5dbef286d11dbd7a7421306d9575af46111f"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/ce27cc51a9d1e934.jsonl",
+          "sha256": "50f79c2c3903cd024e7d074f356f68c64de9a64ccc379277674d3f2e3213f6f2"
+        },
+        {
+          "path": "verification/synthetic_cpu/runs/9f26ef277ba5/09be9d5fb9775eeb.jsonl",
+          "sha256": "ad1d961eec65f8b1780361d932d62a1058c85c88f5f4f5a81809b01420821170"
+        }
+      ]
+    },
+    {
+      "label": "gpu6",
+      "physical_gpu": 6,
+      "episodes": 144,
+      "cells": 9,
+      "original_plan_sha256": "5e33e033e56deb6deff0e8e1f57f523045f3fe9b20e696009b54d980654f8b8e",
+      "archive_plan_sha256": "b084e582f6a0b761ed84df4387e19ade8b8af88b756f737457ed6ae59f113862",
+      "records": [
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/a66048f476e4bc0b.jsonl",
+          "sha256": "38604e79782edf78dfaa9c424d736bdf9541f382aaa5600f69854bab302f43ac"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/6f0226b533d715a5.jsonl",
+          "sha256": "1f8d475314cc7358849a2a510520a60e8a5d896cd7f0e76ea0cfd944634454dc"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/53bd97d9843f7cd1.jsonl",
+          "sha256": "da1de4baca12eec2c86f0c9f5355aad961dea6577ee0fe8381f989c4b6661fdc"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/ca733bb1ec3d7beb.jsonl",
+          "sha256": "b300b8f78feed8e6f8359fdf72f4c56b49b3f30f3a8ace6c2cc4fc2138231e04"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/c5d07bc085c2a4e8.jsonl",
+          "sha256": "a657431d7767c2e7ad6403af141db4420c4e4f40871e81365bf3be28d601f054"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/bf03ce72a41d78ae.jsonl",
+          "sha256": "22f1920efdeb61625b9918aa487f545da871a65bef36ddef56eab139fd257d69"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/4cdae59155f9812e.jsonl",
+          "sha256": "57a3a0840f722d254c89dd0baa8b627ef1e8bdfcd5f99be2d6d0772ff399d20d"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/86eec39f3ef7a491.jsonl",
+          "sha256": "1f5b7e78f10fe1806fc920c33e8d9548de38a1201d826b67ed653d8ded4d6a69"
+        },
+        {
+          "path": "verification/synthetic_gpu6/runs/273a3d2d4d6f/a77532ec1fc3b64b.jsonl",
+          "sha256": "f51608772db5e1969f4bff5e324b33b5c31d8833ecdd50be499728e9e7291b49"
+        }
+      ]
+    }
+  ],
+  "relocation": "Raw JSONL bytes unchanged. Plans were regenerated with archive-relative paths and analyses recomputed from those records.",
+  "checks": {
+    "cpu_pytest": {
+      "passed": 175,
+      "skipped": 5
+    },
+    "gpu6_pytest": {
+      "passed": 180
+    },
+    "upstream_cells_verified": 417
+  }
+}

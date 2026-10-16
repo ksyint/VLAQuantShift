@@ -1,0 +1,849 @@
+{
+  "evidence_type": "synthetic_integration_fixture",
+  "robotics_claim": false,
+  "description": "Fixed linear image/goal controller; not a pretrained VLA or real robot.",
+  "plan_sha256": "a4bf416645bd7512faca7130e9775e6959b4d1364090466bf95ca30702e60bf3",
+  "comparisons": [
+    {
+      "comparison": {
+        "seed": 0,
+        "condition": "brightness:0.2",
+        "quantization": "rtn_w4a8",
+        "fp_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+        "q_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/d3a3ce52bfc4ee2b.jsonl",
+        "fp_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/d24c88dac5759bf8.jsonl",
+        "q_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/7e4a9b0873132468.jsonl"
+      },
+      "analysis": {
+        "schema_version": 1,
+        "analysis": "paired_quantization_by_observation_shift",
+        "estimand": "task_balanced_excess_quantization_degradation",
+        "formula": "(success_fp_shift - success_q_shift) - (success_fp_clean - success_q_clean)",
+        "positive_means": "quantization penalty worsens under observation shift",
+        "units": "success_probability_difference",
+        "protocol": {
+          "eval_shift": "brightness:0.2",
+          "calib_shift": "clean",
+          "shift_seed": 19,
+          "calibration_metadata_matched": true,
+          "calibration_cache_sha256": null,
+          "checkpoint_identity_limit": "Checkpoint path/reference and recorded metadata match; checkpoint content digests are not verified.",
+          "pairing": [
+            "suite",
+            "task_id",
+            "episode",
+            "seed"
+          ],
+          "task_coverage": "explicit_task_list_verified"
+        },
+        "arms": {
+          "fp_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+            "n_episodes": 32,
+            "successes": 32,
+            "pooled_success_rate": 1.0,
+            "task_balanced_success_rate": {
+              "point": 1.0,
+              "low": 1.0,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/d3a3ce52bfc4ee2b.jsonl",
+            "n_episodes": 32,
+            "successes": 18,
+            "pooled_success_rate": 0.5625,
+            "task_balanced_success_rate": {
+              "point": 0.5625,
+              "low": 0.125,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "fp_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/d24c88dac5759bf8.jsonl",
+            "n_episodes": 32,
+            "successes": 0,
+            "pooled_success_rate": 0.0,
+            "task_balanced_success_rate": {
+              "point": 0.0,
+              "low": 0.0,
+              "high": 0.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/7e4a9b0873132468.jsonl",
+            "n_episodes": 32,
+            "successes": 0,
+            "pooled_success_rate": 0.0,
+            "task_balanced_success_rate": {
+              "point": 0.0,
+              "low": 0.0,
+              "high": 0.0,
+              "confidence_level": 0.95
+            }
+          }
+        },
+        "quantization_penalty": {
+          "clean": {
+            "point": 0.4375,
+            "low": 0.0,
+            "high": 0.875,
+            "confidence_level": 0.95
+          },
+          "shift": {
+            "point": 0.0,
+            "low": 0.0,
+            "high": 0.0,
+            "confidence_level": 0.95
+          }
+        },
+        "excess_degradation": {
+          "point": -0.4375,
+          "low": -0.875,
+          "high": 0.0,
+          "confidence_level": 0.95
+        },
+        "pooled_excess_degradation": -0.4375,
+        "task_effects": [
+          {
+            "suite": "synthetic_v1",
+            "task_id": 0,
+            "task_name": "synthetic_target_0",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.0,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 1.0,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": -1.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 1,
+            "task_name": "synthetic_target_1",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.25,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 0.75,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": -0.75
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 2,
+            "task_name": "synthetic_target_2",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 1.0,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 0.0,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": 0.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 3,
+            "task_name": "synthetic_target_3",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 1.0,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 0.0,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": 0.0
+          }
+        ],
+        "paired_outcomes": {
+          "clean": {
+            "both_success": 18,
+            "both_failure": 0,
+            "quantization_failures": 14,
+            "quantization_rescues": 0
+          },
+          "shift": {
+            "both_success": 0,
+            "both_failure": 32,
+            "quantization_failures": 0,
+            "quantization_rescues": 0
+          },
+          "positive_excess_episode_count": 0,
+          "negative_excess_episode_count": 14,
+          "zero_excess_episode_count": 18,
+          "four_arm_patterns": {
+            "1000": 14,
+            "1100": 18
+          },
+          "pattern_arm_order": [
+            "fp_clean",
+            "q_clean",
+            "fp_shift",
+            "q_shift"
+          ]
+        },
+        "sample_sizes": {
+          "n_tasks": 4,
+          "n_episode_pairs": 32,
+          "n_rollouts": 128
+        },
+        "bootstrap": {
+          "method": "paired_task_cluster_percentile",
+          "n_resamples": 500,
+          "seed": 0,
+          "confidence_level": 0.95,
+          "estimand_weighting": "equal task weights; all episodes retained within sampled tasks",
+          "conditional_on": "recorded episodes within each task",
+          "single_task_degenerate": false,
+          "zero_empirical_task_effect_variance": false,
+          "limitation": null
+        }
+      }
+    },
+    {
+      "comparison": {
+        "seed": 0,
+        "condition": "brightness:0.2",
+        "quantization": "rtn_w3",
+        "fp_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+        "q_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/0bf3ea0ff9992ae1.jsonl",
+        "fp_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/d24c88dac5759bf8.jsonl",
+        "q_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/16737bb27152129b.jsonl"
+      },
+      "analysis": {
+        "schema_version": 1,
+        "analysis": "paired_quantization_by_observation_shift",
+        "estimand": "task_balanced_excess_quantization_degradation",
+        "formula": "(success_fp_shift - success_q_shift) - (success_fp_clean - success_q_clean)",
+        "positive_means": "quantization penalty worsens under observation shift",
+        "units": "success_probability_difference",
+        "protocol": {
+          "eval_shift": "brightness:0.2",
+          "calib_shift": "clean",
+          "shift_seed": 19,
+          "calibration_metadata_matched": true,
+          "calibration_cache_sha256": null,
+          "checkpoint_identity_limit": "Checkpoint path/reference and recorded metadata match; checkpoint content digests are not verified.",
+          "pairing": [
+            "suite",
+            "task_id",
+            "episode",
+            "seed"
+          ],
+          "task_coverage": "explicit_task_list_verified"
+        },
+        "arms": {
+          "fp_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+            "n_episodes": 32,
+            "successes": 32,
+            "pooled_success_rate": 1.0,
+            "task_balanced_success_rate": {
+              "point": 1.0,
+              "low": 1.0,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/0bf3ea0ff9992ae1.jsonl",
+            "n_episodes": 32,
+            "successes": 2,
+            "pooled_success_rate": 0.0625,
+            "task_balanced_success_rate": {
+              "point": 0.0625,
+              "low": 0.0,
+              "high": 0.125,
+              "confidence_level": 0.95
+            }
+          },
+          "fp_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/d24c88dac5759bf8.jsonl",
+            "n_episodes": 32,
+            "successes": 0,
+            "pooled_success_rate": 0.0,
+            "task_balanced_success_rate": {
+              "point": 0.0,
+              "low": 0.0,
+              "high": 0.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/16737bb27152129b.jsonl",
+            "n_episodes": 32,
+            "successes": 0,
+            "pooled_success_rate": 0.0,
+            "task_balanced_success_rate": {
+              "point": 0.0,
+              "low": 0.0,
+              "high": 0.0,
+              "confidence_level": 0.95
+            }
+          }
+        },
+        "quantization_penalty": {
+          "clean": {
+            "point": 0.9375,
+            "low": 0.875,
+            "high": 1.0,
+            "confidence_level": 0.95
+          },
+          "shift": {
+            "point": 0.0,
+            "low": 0.0,
+            "high": 0.0,
+            "confidence_level": 0.95
+          }
+        },
+        "excess_degradation": {
+          "point": -0.9375,
+          "low": -1.0,
+          "high": -0.875,
+          "confidence_level": 0.95
+        },
+        "pooled_excess_degradation": -0.9375,
+        "task_effects": [
+          {
+            "suite": "synthetic_v1",
+            "task_id": 0,
+            "task_name": "synthetic_target_0",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.125,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 0.875,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": -0.875
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 1,
+            "task_name": "synthetic_target_1",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.0,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 1.0,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": -1.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 2,
+            "task_name": "synthetic_target_2",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.125,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 0.875,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": -0.875
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 3,
+            "task_name": "synthetic_target_3",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.0,
+              "fp_shift": 0.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 1.0,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": -1.0
+          }
+        ],
+        "paired_outcomes": {
+          "clean": {
+            "both_success": 2,
+            "both_failure": 0,
+            "quantization_failures": 30,
+            "quantization_rescues": 0
+          },
+          "shift": {
+            "both_success": 0,
+            "both_failure": 32,
+            "quantization_failures": 0,
+            "quantization_rescues": 0
+          },
+          "positive_excess_episode_count": 0,
+          "negative_excess_episode_count": 30,
+          "zero_excess_episode_count": 2,
+          "four_arm_patterns": {
+            "1000": 30,
+            "1100": 2
+          },
+          "pattern_arm_order": [
+            "fp_clean",
+            "q_clean",
+            "fp_shift",
+            "q_shift"
+          ]
+        },
+        "sample_sizes": {
+          "n_tasks": 4,
+          "n_episode_pairs": 32,
+          "n_rollouts": 128
+        },
+        "bootstrap": {
+          "method": "paired_task_cluster_percentile",
+          "n_resamples": 500,
+          "seed": 0,
+          "confidence_level": 0.95,
+          "estimand_weighting": "equal task weights; all episodes retained within sampled tasks",
+          "conditional_on": "recorded episodes within each task",
+          "single_task_degenerate": false,
+          "zero_empirical_task_effect_variance": false,
+          "limitation": null
+        }
+      }
+    },
+    {
+      "comparison": {
+        "seed": 0,
+        "condition": "gaussian_noise:0.05",
+        "quantization": "rtn_w4a8",
+        "fp_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+        "q_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/d3a3ce52bfc4ee2b.jsonl",
+        "fp_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/65bc5c38eb812676.jsonl",
+        "q_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/ce27cc51a9d1e934.jsonl"
+      },
+      "analysis": {
+        "schema_version": 1,
+        "analysis": "paired_quantization_by_observation_shift",
+        "estimand": "task_balanced_excess_quantization_degradation",
+        "formula": "(success_fp_shift - success_q_shift) - (success_fp_clean - success_q_clean)",
+        "positive_means": "quantization penalty worsens under observation shift",
+        "units": "success_probability_difference",
+        "protocol": {
+          "eval_shift": "gaussian_noise:0.05",
+          "calib_shift": "clean",
+          "shift_seed": 19,
+          "calibration_metadata_matched": true,
+          "calibration_cache_sha256": null,
+          "checkpoint_identity_limit": "Checkpoint path/reference and recorded metadata match; checkpoint content digests are not verified.",
+          "pairing": [
+            "suite",
+            "task_id",
+            "episode",
+            "seed"
+          ],
+          "task_coverage": "explicit_task_list_verified"
+        },
+        "arms": {
+          "fp_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+            "n_episodes": 32,
+            "successes": 32,
+            "pooled_success_rate": 1.0,
+            "task_balanced_success_rate": {
+              "point": 1.0,
+              "low": 1.0,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/d3a3ce52bfc4ee2b.jsonl",
+            "n_episodes": 32,
+            "successes": 18,
+            "pooled_success_rate": 0.5625,
+            "task_balanced_success_rate": {
+              "point": 0.5625,
+              "low": 0.125,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "fp_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/65bc5c38eb812676.jsonl",
+            "n_episodes": 32,
+            "successes": 32,
+            "pooled_success_rate": 1.0,
+            "task_balanced_success_rate": {
+              "point": 1.0,
+              "low": 1.0,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/ce27cc51a9d1e934.jsonl",
+            "n_episodes": 32,
+            "successes": 19,
+            "pooled_success_rate": 0.59375,
+            "task_balanced_success_rate": {
+              "point": 0.59375,
+              "low": 0.1875,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          }
+        },
+        "quantization_penalty": {
+          "clean": {
+            "point": 0.4375,
+            "low": 0.0,
+            "high": 0.875,
+            "confidence_level": 0.95
+          },
+          "shift": {
+            "point": 0.40625,
+            "low": 0.0,
+            "high": 0.8125,
+            "confidence_level": 0.95
+          }
+        },
+        "excess_degradation": {
+          "point": -0.03125,
+          "low": -0.09375,
+          "high": 0.0,
+          "confidence_level": 0.95
+        },
+        "pooled_excess_degradation": -0.03125,
+        "task_effects": [
+          {
+            "suite": "synthetic_v1",
+            "task_id": 0,
+            "task_name": "synthetic_target_0",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.0,
+              "fp_shift": 1.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 1.0,
+            "quantization_penalty_shift": 1.0,
+            "excess_degradation": 0.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 1,
+            "task_name": "synthetic_target_1",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.25,
+              "fp_shift": 1.0,
+              "q_shift": 0.375
+            },
+            "quantization_penalty_clean": 0.75,
+            "quantization_penalty_shift": 0.625,
+            "excess_degradation": -0.125
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 2,
+            "task_name": "synthetic_target_2",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 1.0,
+              "fp_shift": 1.0,
+              "q_shift": 1.0
+            },
+            "quantization_penalty_clean": 0.0,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": 0.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 3,
+            "task_name": "synthetic_target_3",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 1.0,
+              "fp_shift": 1.0,
+              "q_shift": 1.0
+            },
+            "quantization_penalty_clean": 0.0,
+            "quantization_penalty_shift": 0.0,
+            "excess_degradation": 0.0
+          }
+        ],
+        "paired_outcomes": {
+          "clean": {
+            "both_success": 18,
+            "both_failure": 0,
+            "quantization_failures": 14,
+            "quantization_rescues": 0
+          },
+          "shift": {
+            "both_success": 19,
+            "both_failure": 0,
+            "quantization_failures": 13,
+            "quantization_rescues": 0
+          },
+          "positive_excess_episode_count": 0,
+          "negative_excess_episode_count": 1,
+          "zero_excess_episode_count": 31,
+          "four_arm_patterns": {
+            "1010": 13,
+            "1011": 1,
+            "1111": 18
+          },
+          "pattern_arm_order": [
+            "fp_clean",
+            "q_clean",
+            "fp_shift",
+            "q_shift"
+          ]
+        },
+        "sample_sizes": {
+          "n_tasks": 4,
+          "n_episode_pairs": 32,
+          "n_rollouts": 128
+        },
+        "bootstrap": {
+          "method": "paired_task_cluster_percentile",
+          "n_resamples": 500,
+          "seed": 0,
+          "confidence_level": 0.95,
+          "estimand_weighting": "equal task weights; all episodes retained within sampled tasks",
+          "conditional_on": "recorded episodes within each task",
+          "single_task_degenerate": false,
+          "zero_empirical_task_effect_variance": false,
+          "limitation": null
+        }
+      }
+    },
+    {
+      "comparison": {
+        "seed": 0,
+        "condition": "gaussian_noise:0.05",
+        "quantization": "rtn_w3",
+        "fp_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+        "q_clean": "verification/synthetic_cpu/runs/9f26ef277ba5/0bf3ea0ff9992ae1.jsonl",
+        "fp_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/65bc5c38eb812676.jsonl",
+        "q_shift": "verification/synthetic_cpu/runs/9f26ef277ba5/09be9d5fb9775eeb.jsonl"
+      },
+      "analysis": {
+        "schema_version": 1,
+        "analysis": "paired_quantization_by_observation_shift",
+        "estimand": "task_balanced_excess_quantization_degradation",
+        "formula": "(success_fp_shift - success_q_shift) - (success_fp_clean - success_q_clean)",
+        "positive_means": "quantization penalty worsens under observation shift",
+        "units": "success_probability_difference",
+        "protocol": {
+          "eval_shift": "gaussian_noise:0.05",
+          "calib_shift": "clean",
+          "shift_seed": 19,
+          "calibration_metadata_matched": true,
+          "calibration_cache_sha256": null,
+          "checkpoint_identity_limit": "Checkpoint path/reference and recorded metadata match; checkpoint content digests are not verified.",
+          "pairing": [
+            "suite",
+            "task_id",
+            "episode",
+            "seed"
+          ],
+          "task_coverage": "explicit_task_list_verified"
+        },
+        "arms": {
+          "fp_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/c1d5f78f9ed81a46.jsonl",
+            "n_episodes": 32,
+            "successes": 32,
+            "pooled_success_rate": 1.0,
+            "task_balanced_success_rate": {
+              "point": 1.0,
+              "low": 1.0,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_clean": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/0bf3ea0ff9992ae1.jsonl",
+            "n_episodes": 32,
+            "successes": 2,
+            "pooled_success_rate": 0.0625,
+            "task_balanced_success_rate": {
+              "point": 0.0625,
+              "low": 0.0,
+              "high": 0.125,
+              "confidence_level": 0.95
+            }
+          },
+          "fp_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/65bc5c38eb812676.jsonl",
+            "n_episodes": 32,
+            "successes": 32,
+            "pooled_success_rate": 1.0,
+            "task_balanced_success_rate": {
+              "point": 1.0,
+              "low": 1.0,
+              "high": 1.0,
+              "confidence_level": 0.95
+            }
+          },
+          "q_shift": {
+            "path": "verification/synthetic_cpu/runs/9f26ef277ba5/09be9d5fb9775eeb.jsonl",
+            "n_episodes": 32,
+            "successes": 2,
+            "pooled_success_rate": 0.0625,
+            "task_balanced_success_rate": {
+              "point": 0.0625,
+              "low": 0.0,
+              "high": 0.125,
+              "confidence_level": 0.95
+            }
+          }
+        },
+        "quantization_penalty": {
+          "clean": {
+            "point": 0.9375,
+            "low": 0.875,
+            "high": 1.0,
+            "confidence_level": 0.95
+          },
+          "shift": {
+            "point": 0.9375,
+            "low": 0.875,
+            "high": 1.0,
+            "confidence_level": 0.95
+          }
+        },
+        "excess_degradation": {
+          "point": 0.0,
+          "low": 0.0,
+          "high": 0.0,
+          "confidence_level": 0.95
+        },
+        "pooled_excess_degradation": 0.0,
+        "task_effects": [
+          {
+            "suite": "synthetic_v1",
+            "task_id": 0,
+            "task_name": "synthetic_target_0",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.125,
+              "fp_shift": 1.0,
+              "q_shift": 0.125
+            },
+            "quantization_penalty_clean": 0.875,
+            "quantization_penalty_shift": 0.875,
+            "excess_degradation": 0.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 1,
+            "task_name": "synthetic_target_1",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.0,
+              "fp_shift": 1.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 1.0,
+            "quantization_penalty_shift": 1.0,
+            "excess_degradation": 0.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 2,
+            "task_name": "synthetic_target_2",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.125,
+              "fp_shift": 1.0,
+              "q_shift": 0.125
+            },
+            "quantization_penalty_clean": 0.875,
+            "quantization_penalty_shift": 0.875,
+            "excess_degradation": 0.0
+          },
+          {
+            "suite": "synthetic_v1",
+            "task_id": 3,
+            "task_name": "synthetic_target_3",
+            "n_episode_pairs": 8,
+            "success_rates": {
+              "fp_clean": 1.0,
+              "q_clean": 0.0,
+              "fp_shift": 1.0,
+              "q_shift": 0.0
+            },
+            "quantization_penalty_clean": 1.0,
+            "quantization_penalty_shift": 1.0,
+            "excess_degradation": 0.0
+          }
+        ],
+        "paired_outcomes": {
+          "clean": {
+            "both_success": 2,
+            "both_failure": 0,
+            "quantization_failures": 30,
+            "quantization_rescues": 0
+          },
+          "shift": {
+            "both_success": 2,
+            "both_failure": 0,
+            "quantization_failures": 30,
+            "quantization_rescues": 0
+          },
+          "positive_excess_episode_count": 0,
+          "negative_excess_episode_count": 0,
+          "zero_excess_episode_count": 32,
+          "four_arm_patterns": {
+            "1010": 30,
+            "1111": 2
+          },
+          "pattern_arm_order": [
+            "fp_clean",
+            "q_clean",
+            "fp_shift",
+            "q_shift"
+          ]
+        },
+        "sample_sizes": {
+          "n_tasks": 4,
+          "n_episode_pairs": 32,
+          "n_rollouts": 128
+        },
+        "bootstrap": {
+          "method": "paired_task_cluster_percentile",
+          "n_resamples": 500,
+          "seed": 0,
+          "confidence_level": 0.95,
+          "estimand_weighting": "equal task weights; all episodes retained within sampled tasks",
+          "conditional_on": "recorded episodes within each task",
+          "single_task_degenerate": false,
+          "zero_empirical_task_effect_variance": true,
+          "limitation": null
+        }
+      }
+    }
+  ]
+}
