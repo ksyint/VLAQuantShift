@@ -109,6 +109,22 @@ def _collect_act_calib(adapter, runner, args) -> dict:
     cache = cache_path(args.model, adapter.checkpoint, args.suite, comps, args.act_calib_episodes,
                        episodes_from=args.act_calib_from, tasks=args.act_calib_tasks, seed=args.seed,
                        commit=git_commit())
+    if getattr(args, "eval_shift", None) is not None:
+        from vlaquantshift.intervention import calibration_cache_path
+
+        cache = calibration_cache_path(cache, {
+            "schema_version": 1, "calib_shift": args.calib_shift, "shift_seed": args.shift_seed,
+            "dtype": str(adapter.dtype), "adapter_options": adapter.options,
+            "runner_options": runner.options, "bench_kwargs": args.bench_kwargs,
+            "max_steps": args.max_steps, "benchmark": args.benchmark,
+            "effective_runner": {key: getattr(runner, key, None) for key in (
+                "camera_size", "action_mode", "flip_images", "honor_adapter_protocol", "_adapter_max_steps",
+                "max_substeps", "tolerance", "intention_score_threshold", "eval_unseen", "max_steps_override")},
+            "calibration_tasks": [{"task_id": task.task_id, "name": task.task_name,
+                                   "max_steps": task.max_steps, "extra": task.extra}
+                                  for task in runner.tasks()[:args.act_calib_tasks]],
+            "episode_rng": "identity_seed_v1",
+        })
     if cache.exists():
         raw = torch.load(cache, weights_only=False)
         log.info("act-calib: loaded cached statistics for %d layers from %s", len(raw), cache)
@@ -134,6 +150,15 @@ def _collect_act_calib(adapter, runner, args) -> dict:
         "tasks": args.act_calib_tasks, "seed": args.seed, "alpha": args.act_calib_alpha,
         "clip_quantile": args.act_calib_quantile, "cache": cache.name, "commit": git_commit(),
     }
+    if getattr(args, "eval_shift", None) is not None:
+        import hashlib
+
+        cache_hash = hashlib.sha256()
+        with cache.open("rb") as cached:
+            for chunk in iter(lambda: cached.read(1024 * 1024), b""):
+                cache_hash.update(chunk)
+        args._act_calib_provenance.update(calib_shift=args.calib_shift, shift_seed=args.shift_seed,
+                                          cache_sha256=cache_hash.hexdigest())
     return bank
 
 
@@ -197,6 +222,20 @@ def cmd_inspect(args: argparse.Namespace) -> None:
 
 
 def cmd_run(args: argparse.Namespace) -> None:
+    extension = getattr(args, "eval_shift", None) is not None
+    if extension:
+        from vlaquantshift.shifts import ShiftSpec
+
+        args.eval_shift = ShiftSpec.parse(args.eval_shift).canonical
+        args.calib_shift = ShiftSpec.parse(args.calib_shift).canonical
+        if args.model == "remote":
+            raise ValueError("paired shift protocol requires local adapters: remote policy RNG cannot be controlled")
+        if (args.method or "rtn").lower() != "rtn":
+            raise ValueError("paired shift protocol currently audits RTN only; method extensions need separate validation")
+        if args.episodes_from < 0 or (args.episodes is not None and args.episodes <= args.episodes_from):
+            raise ValueError("require 0 <= --episodes-from < --episodes (exclusive endpoint)")
+    elif getattr(args, "calib_shift", "clean") != "clean":
+        raise ValueError("--calib-shift requires explicit --eval-shift (use clean for clean evaluation)")
     args.checkpoint = resolve_checkpoint(args.model, args.checkpoint, args.benchmark, args.suite)
     runner_cls = get_runner_cls(args.benchmark)
     runner_kwargs: dict[str, Any] = {}
@@ -207,6 +246,18 @@ def cmd_run(args: argparse.Namespace) -> None:
         args.suite, episodes_per_task=args.episodes, seed=args.seed, max_steps_override=args.max_steps,
         video_dir=args.video_dir, **runner_kwargs,
     )
+    if extension and runner.__class__.__module__ == "vlaquantbench.benchmarks.calvin":
+        if args.episodes_from != 0 or runner.episodes_per_task != 1:
+            raise ValueError("CALVIN has one fixed chain per task; use --episodes 1 --episodes-from 0")
+        if getattr(args, "act_calib", None):
+            raise ValueError("CALVIN requires task-chain calibration splits; episode-index calibration is unsupported")
+    if extension and getattr(args, "act_calib", None):
+        if args.act_calib_from < 0 or args.act_calib_episodes < 1 or args.act_calib_tasks < 1:
+            raise ValueError("calibration requires nonnegative start and positive episode/task counts")
+        eval_indices = set(range(args.episodes_from, runner.episodes_per_task))
+        calib_indices = set(range(args.act_calib_from, args.act_calib_from + args.act_calib_episodes))
+        if eval_indices & calib_indices:
+            raise ValueError("calibration/evaluation episode indices overlap; e.g. evaluate 0:20 and calibrate 20:22")
     adapter = build_adapter(args)
     out_model = getattr(adapter, "served_name", None) if args.model == "remote" else args.model
     out = Path(args.out) if args.out else default_out_path(
@@ -215,10 +266,38 @@ def cmd_run(args: argparse.Namespace) -> None:
     )
     if hasattr(runner, "configure_for"):
         runner.configure_for(adapter)  # adopt the model's official benchmark conventions before listing tasks
+    if extension:
+        # Reject indices that would wrap (LIBERO) or index outside a native
+        # VLABench track. Other runners retain their own episode validation.
+        available_tasks = runner.tasks()
+        calibration_tasks = {t.task_id for t in available_tasks[:getattr(args, "act_calib_tasks", 1)]}
+        for task in available_tasks:
+            count = task.extra.get("n_episodes")
+            if args.benchmark == "libero":
+                count = len(runner._init_states(task))
+            if count is not None and runner.episodes_per_task > count:
+                # VLABench tracks have uneven coverage. Use their native
+                # per-task cap, but never wrap explicit calibration indices.
+                if args.benchmark != "vlabench":
+                    raise ValueError(f"evaluation endpoint exceeds {count} available initial states")
+            if (count is not None and getattr(args, "act_calib", None)
+                    and task.task_id in calibration_tasks
+                    and args.act_calib_from + args.act_calib_episodes > count):
+                raise ValueError(f"calibration indices exceed {count} available states for {task.task_name}")
     act_calib = None
     if getattr(args, "act_calib", None):
-        act_calib = _collect_act_calib(adapter, runner, args)
+        if extension:
+            from vlaquantshift.intervention import ObservationIntervention
+
+            calibration_adapter = ObservationIntervention(adapter, args.calib_shift, args.shift_seed)
+        else:
+            calibration_adapter = adapter
+        act_calib = _collect_act_calib(calibration_adapter, runner, args)
     quant_report = apply_quantization(adapter, args, act_calib=act_calib)
+    if extension and not parse_spec(args.preset).is_baseline:
+        changed_layers = sum(report.get("layers", 0) for report in quant_report.values() if isinstance(report, dict))
+        if changed_layers == 0:
+            raise ValueError("non-baseline condition quantized zero layers; verify scope and exclusion patterns")
     model_name = getattr(adapter, "served_name", None) if args.model == "remote" else args.model
     header = RunHeader(
         model=model_name or args.model, checkpoint=adapter.checkpoint, benchmark=args.benchmark, suite=args.suite,
@@ -227,13 +306,42 @@ def cmd_run(args: argparse.Namespace) -> None:
         seed=args.seed, quantize_lm_head=args.quantize_lm_head, include_conv=args.include_conv,
         quant_report=quant_report,
         extra={"adapter_options": adapter.options, "runner_options": runner_kwargs, "exclude": args.exclude, "only": args.only,
-               "act_calib": (list(args.act_calib) if getattr(args, "act_calib", None) else None)},
+               "act_calib": (list(args.act_calib) if getattr(args, "act_calib", None) else None),
+               "real_kernel": args.real_kernel, "calib": args.calib,
+               "act_calib_config": getattr(args, "_act_calib_provenance", None)},
     )
+    if extension:
+        from vlaquantshift.intervention import ObservationIntervention, runtime_provenance
+
+        header.extra["vlaquantshift"] = {
+            "schema_version": 1, "eval_shift": args.eval_shift, "calib_shift": args.calib_shift,
+            "shift_seed": args.shift_seed, "episodes_from": args.episodes_from,
+            "episodes_to": runner.episodes_per_task, "tasks": args.tasks, "max_steps": args.max_steps,
+            "episode_rng": "identity_seed_v1", "protocol_version": 1,
+            "baseline_dtype": str(adapter.dtype).replace("torch.", ""),
+            "runtime": runtime_provenance(REPO_ROOT),
+        }
+        adapter = ObservationIntervention(adapter, args.eval_shift, args.shift_seed)
+        if not args.out:
+            tag = f"shift-{args.eval_shift}-calib-{args.calib_shift}-s{args.shift_seed}"
+            out = out.with_name(f"{out.stem}-{tag}{out.suffix}")
     tasks = None
     if args.tasks:
         wanted = {int(t) for t in args.tasks.split(",")}
         tasks = [t for t in runner.tasks() if t.task_id in wanted]
+        if extension and {t.task_id for t in tasks} != wanted:
+            raise ValueError("--tasks includes an unknown task id")
     episodes = range(args.episodes_from, runner.episodes_per_task) if args.episodes_from else None
+    if extension and args.benchmark == "vlabench" and args.episodes_from:
+        # The shared runner accepts one explicit episode list; per-task caps
+        # are needed for track_2 insert_flower (10 episodes, others have 50).
+        raise ValueError("VLABench shifted runs currently require --episodes-from 0 to preserve native task caps")
+    if extension:
+        selected_tasks = tasks if tasks is not None else runner.tasks()
+        header.extra["vlaquantshift"]["episodes_by_task"] = {
+            str(task.task_id): list(episodes) if episodes is not None else runner.episodes_for(task)
+            for task in selected_tasks
+        }
     with RunWriter(out, header, resume=not args.no_resume) as writer:
         summary = runner.run(adapter, writer, tasks=tasks, episodes=episodes)
     if hasattr(runner, "close"):
@@ -418,6 +526,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--report-error", action="store_true", help="record per-layer weight reconstruction error")
     run.add_argument("--episodes", type=int, default=None, help="episodes per task (default: official protocol)")
     run.add_argument("--episodes-from", type=int, default=0)
+    run.add_argument("--eval-shift", default=None,
+                     help="enable paired shift protocol: clean | brightness:0.2 | gaussian_noise:0.05 | occlusion:0.15 | camera_dropout:0.2")
+    run.add_argument("--calib-shift", default="clean", help="observation shift during activation calibration")
+    run.add_argument("--shift-seed", type=int, default=0, help="sensor-corruption RNG, independent of policy RNG")
     run.add_argument("--tasks", default=None, help="comma-separated task ids subset")
     run.add_argument("--max-steps", type=int, default=None)
     run.add_argument("--video-dir", default=None)

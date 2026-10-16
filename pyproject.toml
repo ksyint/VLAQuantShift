@@ -3,19 +3,14 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vlaquantbench"
-version = "1.1.0"
-description = "Closed-loop evaluation of post-training quantization for vision-language-action models"
+name = "vlaquantshift"
+version = "0.1.0"
+description = "Paired quantization-by-distribution-shift evaluation extending VLAQuantBench"
 readme = "README.md"
 authors = [
-  { name = "Jiuyi Xu", email = "jiuyi_xu@mines.edu" },
-  { name = "Qing Jin" },
-  { name = "Meida Chen" },
-  { name = "Song Wang" },
-  { name = "Yang Sui" },
-  { name = "Yangming Shi" },
+  { name = "ksyint" },
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
     "torch>=2.1",
@@ -31,9 +26,10 @@ ptq = ["bitsandbytes>=0.43", "datasets", "accelerate"]
 
 [project.scripts]
 vqb = "vlaquantbench.cli:main"
+vqs = "vlaquantshift.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["vlaquantbench*"]
+include = ["vlaquantbench*", "vlaquantshift*"]
 
 [tool.ruff]
 line-length = 120

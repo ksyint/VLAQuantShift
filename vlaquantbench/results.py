@@ -144,8 +144,11 @@ class RunWriter:
 
 def _compatible(a: RunHeader, b: RunHeader) -> bool:
     keys = ("model", "checkpoint", "benchmark", "suite", "preset", "scope", "method", "quantize_lm_head",
-            "include_conv", "seed")
-    return all(getattr(a, k) == getattr(b, k) for k in keys)
+            "include_conv", "seed", "baseline_dtype", "quant_report")
+    extra_keys = ("adapter_options", "runner_options", "exclude", "only", "act_calib",
+                  "act_calib_config", "vlaquantshift", "real_kernel", "calib")
+    return (all(getattr(a, k) == getattr(b, k) for k in keys)
+            and all(a.extra.get(k) == b.extra.get(k) for k in extra_keys))
 
 
 def _json_default(o: Any):

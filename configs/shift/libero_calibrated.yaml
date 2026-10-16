@@ -1,0 +1,24 @@
+# Calibration uses indices 20-21; evaluation uses 0-19. A separate plan for each
+# calibration source keeps calibration fixed within every 2x2 contrast.
+schema_version: 1
+model: pi05
+checkpoint: lerobot/pi05_libero_finetuned_v044
+benchmark: libero
+suite: libero_spatial
+dtype: bf16
+device: cuda:0
+tasks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+seeds: [0, 1, 2]
+shift_seed: 173
+episodes: {start: 0, stop: 20}
+calibration:
+  components: [ah]
+  shift: clean
+  start: 20
+  count: 2
+  tasks: 1
+  alpha: 0.5
+  quantile: 0.999
+conditions: [clean, 'brightness:0.2', 'gaussian_noise:0.05', 'occlusion:0.15']
+quantizations:
+  - {name: rtn_w4a4_ah_calibrated, preset: W4A4, scope: ah}

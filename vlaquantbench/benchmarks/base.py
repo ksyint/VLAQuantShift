@@ -102,11 +102,18 @@ class BenchmarkRunner(abc.ABC):
             for ep in ep_list:
                 if writer is not None and writer.is_done(task.suite, task.task_id, ep):
                     continue
+                begin_episode = getattr(adapter, "begin_episode", None)
+                if begin_episode is not None:
+                    begin_episode(task, ep, self.episode_seed(task, ep))
                 meter = LatencyMeter(warmup=3)
                 infer = adapter.new_inference_meter(warmup=1)
                 reset_peak_memory()
                 t0 = time.perf_counter()
                 outcome = self.run_episode(adapter, task, ep, meter)
+                episode_extra = dict(outcome.extra or {})
+                episode_summary = getattr(adapter, "episode_summary", None)
+                if episode_summary is not None:
+                    episode_extra["vlaquantshift"] = episode_summary()
                 rec = EpisodeRecord(
                     suite=task.suite,
                     task_id=task.task_id,
@@ -124,7 +131,7 @@ class BenchmarkRunner(abc.ABC):
                     inference_latency_p95_s=infer.p95(),
                     n_inferences=infer._seen,
                     peak_vram_gb=adapter.peak_vram_gb(),
-                    extra=outcome.extra or {},
+                    extra=episode_extra,
                 )
                 records.append(rec)
                 if writer is not None:

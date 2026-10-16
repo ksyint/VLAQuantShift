@@ -13,3 +13,19 @@ third_party/
 results/**/*.mp4
 *.log
 .DS_Store
+
+# Local runs/checkpoints and environments. Curated verification artifacts are explicit.
+shift_runs/
+artifacts/
+.venv/
+.env
+.env.*
+*.safetensors
+*.ckpt
+*.pth
+*.pt
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg

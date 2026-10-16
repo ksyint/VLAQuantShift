@@ -1,0 +1,268 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,tabularx}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,urlcolor=blue,citecolor=blue}
+\newcommand{\pending}{\textit{Pending}}
+\title{VLAQuantShift: A Protocol for Paired Quantization--Shift Interaction Audits}
+\author{Research protocol draft\\Authorship and affiliations to be finalized}
+\date{October 16, 2026}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This protocol specifies an extension of VLAQuantBench for evaluating whether
+quantization changes a vision--language--action policy's sensitivity to
+observation shifts. A paired factorial design compares released-precision and
+quantized policies under clean and shifted observations. Its primary outcome is
+the increase in the quantization penalty under a prespecified shift, with
+episode identity preserved in task-clustered uncertainty estimates. Calibration,
+precision selection, and evaluation use separate provenance manifests. A
+secondary offline diagnostic decomposes supplied cross-policy/state action
+arrays into reference-state discrepancy, state-response, and interaction terms.
+The current artifact is a protocol and software candidate, not a completed
+empirical study. New model-performance, real-robot, and deployment-speed results
+are pending. The proposed contribution concerns reproducible interaction audits;
+neither the factorial contrast nor the algebraic action identity is new theory.
+\end{abstract}
+
+\section{Research question and provenance}
+Can a precision configuration preserve clean task success while increasing
+degradation under observation changes? Does its ranking transfer across
+calibration sources and execution horizons? These are hypotheses to test, not
+findings of this draft.
+
+The implementation develops VLAQuantBench~\cite{xu2026vlaquantbench}, starting
+from upstream commit
+\texttt{4a2cb7c1bf9160ae683fe598ec583d7c9b9c13c9}.
+Its source, license, attribution, and historical results remain upstream work.
+Model adapters, quantization routines, and evaluators inherited from that project
+must be identified as such. The new candidate artifact adds a shift-evaluation
+protocol and supporting analysis. Historical upstream measurements are not
+relabeled as measurements from this study.
+
+\section{Related work and overlap}
+VLAQuantBench already studies closed-loop precision configurations, calibration
+controls, and fixed-observation replay~\cite{xu2026vlaquantbench}.
+QuantVLA calibrates attention and output scales~\cite{zhang2026quantvla};
+QVLA measures action-sensitive channels for bit allocation~\cite{xu2026qvla}.
+PIVOT-Q investigates quantized-policy generalization under environmental shifts
+and selective correction of vulnerable states~\cite{ruan2026pivotq}.
+DA-PTQ targets motion drift~\cite{xu2026daptq}, while DyQ-VLA adapts precision
+temporally~\cite{zheng2026dyqvla}. ActQuant and HBVLA further establish
+action-guided low-bit compression~\cite{akbari2026actquant,yan2026hbvla}.
+Cross-layer dependencies in mixed precision are also established by
+CLADO~\cite{deng2025clado}.
+
+LIBERO-Plus supplies systematic robustness perturbations~\cite{fei2025liberoplus},
+and VLABench supplies a broader manipulation setting~\cite{zhang2024vlabench}.
+A public on-policy calibration repository reports paired experiments and a
+negative calibration result~\cite{parastoopil2026calibrate}; it is cited as a
+research software artifact, not as independently verified peer-reviewed evidence.
+Consequently, closed-loop evaluation, action sensitivity, trajectory drift,
+robustness, and on-policy calibration are not claimed as new ideas here.
+Publication-level differentiation will require new, reproducible empirical
+evidence beyond these overlaps.
+
+\section{Paired factorial protocol}
+Fix a checkpoint, quantization recipe, selected modules, execution convention,
+and shift definition. For task $j$ and episode identity $i$, obtain binary
+success $Y^{p,c}_{ji}$, where $p\in\{f,q\}$ denotes released precision or
+quantization, and $c\in\{0,s\}$ denotes clean or shifted observations.
+Each identity contributes all four conditions. Define
+\begin{align}
+e_{ji} &= (Y^{f,s}_{ji}-Y^{q,s}_{ji})
+          -(Y^{f,0}_{ji}-Y^{q,0}_{ji}),\\
+\widehat E &= \frac{1}{J}\sum_{j=1}^{J}
+                 \frac{1}{n_j}\sum_{i=1}^{n_j}e_{ji}.
+\end{align}
+Positive $100\widehat E$ indicates additional quantization penalty under the
+shift, in percentage points. All four success rates and both precision penalties
+must accompany this statistic: shared FP/Q failure can yield zero interaction.
+If shifted FP and Q success both reach zero, the interaction becomes the negative
+clean precision penalty, even though neither shifted policy succeeds. Clean
+ceilings similarly hide action-quality differences. Report paired outcome
+patterns and task-level rates without removing floor/ceiling tasks post hoc.
+This is a standard factorial contrast conditional on the specified intervention,
+not a new estimator or an unrestricted claim of real-world causality.
+
+\paragraph{Proposed primary test.}
+Before final evaluation, freeze $\pi_{0.5}$ (\texttt{lerobot/pi05\_libero\_finetuned\_v044}) on
+LIBERO-Spatial, end-to-end RTN W4, evaluation seed 0, and
+\texttt{brightness:0.2} as the primary contrast, together with exact checkpoint
+revision, module list, transform, task subset and code revisions. The transform
+adds $0.2\times255$ to each uint8 RGB channel, clips to $[0,255]$ and casts to
+uint8; it is not multiplicative brightness. Seeds 1 and 2 and OpenVLA-OFT are
+secondary replications. A named model repository is not an immutable checkpoint
+revision, and the current plan does not itself resolve one.
+The primary metric is the equal-task estimate above, with a two-sided 95\%
+task-cluster bootstrap interval. This is a preregistration proposal until the
+manifest is committed; changes after viewing test outcomes are exploratory.
+
+\paragraph{Observation intervention.}
+The initial implementation applies deterministic observation transformations
+through inherited runners. Specify camera coverage, dtype, pixel range, clipping,
+ordering and random-seed derivation before preprocessing. Image corruption does
+not reproduce a physical scene intervention. These transforms are not described
+as an official LIBERO-Plus implementation. Scene randomization is a later,
+separately validated integration.
+
+\paragraph{Pair identity.}
+Retain benchmark, suite, task ID, initial-state ID, seed, replicate and shift
+metadata. Duplicate or incomplete four-cell records fail validation by default.
+Record execution errors separately from unsuccessful completed episodes.
+Matched initial states and RNG seeds do not alone guarantee matched per-step
+noise: each policy adapter must disclose deterministic execution, explicit common
+random numbers, or weaker seed-only matching. Action queues, caches and random
+number consumption need adapter-specific audits.
+Observation-corruption randomness uses a separate identity-derived seed. The
+sample plans hold this seed fixed across policy seeds; they do not independently
+replicate corruption realizations. Severity levels also need not share nested
+noise or masks.
+
+\section{Calibration separation and statistical analysis}
+The final study requires immutable calibration, selection and evaluation
+manifests. Enforce episode-disjointness for all roles and task-disjointness when
+claiming task transfer. Current software checks calibration/evaluation episode
+index overlap; selection manifests and task-disjoint validation are not yet
+implemented. Quantizer parameters remain frozen across clean and shifted evaluation.
+Shifted recalibration is a separate adaptation arm at a declared sample and
+collection budget. Do not fit normalization or select precision from test data.
+
+The primary interval resamples task clusters with replacement, carrying complete
+paired episodes, for at least 5,000 seeded bootstrap replicates (override the
+current CLI default of 2,000). Current software resamples tasks only, conditional
+on recorded episodes, and reports one contrast per evaluation seed. It provides
+neither a within-task resampling stage nor a pooled multi-seed interval.
+Few clusters limit inference; provide all task-level effects. A collapsed interval
+is not evidence of certainty. For calibrated methods, use at least three separate
+calibration sets and report their results separately. Current configurations
+couple calibration and evaluation RNG seeds and reuse the same calibration
+initial states, so their three seed runs are not an independently crossed
+calibration-by-evaluation design. Independent calibration sets require separate
+plans with different episode ranges. These intervals do not account for new
+within-task sampling, training uncertainty or calibration variation. Repeated
+evaluation seeds sharing an initial condition are not independent initial states.
+
+The cache key distinguishes calibration transforms and execution settings.
+The extension records and compares calibration-cache content SHA256 values.
+Checkpoint content digests still require separate retention and verification.
+Current calibration collects unquantized-policy trajectories under one transform;
+mixed calibration sources and quantized-policy collection remain extensions.
+
+Secondary comparisons are descriptive unless a multiplicity procedure is
+prespecified. An interval containing zero does not establish equivalence. Report
+null effects, negative interactions, and calibration-seed variability.
+
+\section{Offline cross-policy/state action diagnostic}
+Let $s_f$ and $s_q$ represent the histories and states of two paired policy
+branches at a common control index. Let
+\[
+a_{ff}=\pi_f(s_f),\quad a_{qf}=\pi_q(s_f),\quad
+a_{fq}=\pi_f(s_q),\quad a_{qq}=\pi_q(s_q).
+\]
+Under specified policy memory and inference randomness, define
+\begin{align}
+D &= a_{qf}-a_{ff}, & S &= a_{fq}-a_{ff},\\
+I &= a_{qq}-a_{fq}-a_{qf}+a_{ff}, & T &= a_{qq}-a_{ff}.
+\end{align}
+Then $T=D+S+I$ exactly. The terms describe reference-history quantization
+discrepancy, the FP response to changed history, and their interaction. Norms do
+not add; the corresponding energy identity is
+\[
+\|T\|^2=\|D\|^2+\|S\|^2+\|I\|^2
++2\langle D,S\rangle+2\langle D,I\rangle+2\langle S,I\rangle.
+\]
+Report closure error, component norms and cross terms. Fix action units and any
+calibration-fitted normalization. Mask invalid timesteps after either trajectory
+ends and disclose coverage rather than zero-padding. Aggregate within episodes
+before across tasks. The current analyzer accepts finite equal-shaped $T\times D$
+arrays; callers must prepare alignment, censoring and episode provenance, which
+the analyzer cannot establish from the arrays alone.
+
+The initial analyzer accepts offline arrays. Simulator snapshot/restore, paired
+state branching and automatic crossed VLA evaluation are \emph{not implemented}
+by this diagnostic. Future collection must audit recurrent state, action caches,
+observation history, flow noise and action-chunk semantics. An algebraic identity
+alone does not isolate a physical mechanism or establish that a discrepancy
+caused task failure.
+
+\section{Planned study and ablations}
+Table~\ref{tab:plan} specifies intended coverage, not completed experiments.
+Hold out tasks used for selection and a separate pilot; freeze eligible task
+identities before evaluation. The initial target is at least 20 initial states
+per held-out task and three evaluation seeds where feasible, with independent
+calibration sets for calibrated controls. These are planning targets, not a power
+guarantee. Reassess sample requirements with a separate pilot.
+
+\begin{table}[ht]
+\centering\small
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Axis & Planned coverage \\
+\midrule
+Models & OpenVLA-OFT and $\pi_{0.5}$; pinned released checkpoints \\
+Suites & LIBERO-Spatial and LIBERO-Long; VLABench expansion later \\
+Precision & FP, RTN W4, W4A8, protected-output reference configuration \\
+Shifts & Identity, additive brightness, seeded noise, occlusion, camera dropout; contrast later \\
+Calibration & None for RTN; separate clean/shifted FP collections; mixed sources later \\
+Method comparison & Reproduce available VLA PTQ methods before matched comparisons \\
+Diagnostics & Paired outcomes first; supplied-array decomposition; branch collection later \\
+\bottomrule
+\end{tabularx}
+\caption{Planned matrix. Observation shifts are distinct from simulator scene changes.}
+\label{tab:plan}
+\end{table}
+
+Required controls include identity shifts, independent FP repeats, quantized
+module/hook coverage, equal-budget calibration-source comparisons, protected
+output modules, and executed action-count ablations. Predicted chunk length and
+executed action count are separate variables. Precision selection uses selection
+data only; an action-error selector is a baseline in light of QVLA and ActQuant.
+
+\section{Results status and reporting contract}
+No new VLA or physical-robot results are reported in this draft. Toy fixtures
+validate software behavior only. Fill Table~\ref{tab:pending} from immutable
+episode logs after the study; every cell must link to its manifest and records.
+
+\begin{table}[ht]
+\centering\small
+\begin{tabular}{lccccc}
+\toprule
+Model / suite & FP clean & Q clean & FP shift & Q shift & Excess [95\% CI] \\
+\midrule
+OpenVLA-OFT / Spatial & \pending & \pending & \pending & \pending & \pending \\
+$\pi_{0.5}$ / Spatial & \pending & \pending & \pending & \pending & \pending \\
+OpenVLA-OFT / Long & \pending & \pending & \pending & \pending & \pending \\
+$\pi_{0.5}$ / Long & \pending & \pending & \pending & \pending & \pending \\
+\bottomrule
+\end{tabular}
+\caption{Planned reporting table. Pending entries are not zero or failed runs.}
+\label{tab:pending}
+\end{table}
+
+Additional planned tables report per-task effects, calibration replicates,
+precision-ranking transfer, missing records, and action-diagnostic coverage.
+Fake quantization supports numerical accuracy evaluation; estimated bit budgets
+do not establish packed memory, measured VRAM, kernel latency or robot speed.
+Any deployment measurement requires a separate documented implementation and
+device-specific experiment. GPU execution in the initial workspace is restricted
+to CUDA devices 6 and 7.
+
+\section{Limitations and completion criteria}
+Observation corruptions cover only part of deployment variation. Checkpoints,
+task sets, calibration sets and simulator conventions constrain generalization.
+Stateful policies complicate crossed evaluation, and the initial release has no
+automatic simulator-branch collector. The available methods and baseline
+reproductions may limit the comparison. The study has strong nearby prior work,
+especially PIVOT-Q and DA-PTQ, and novelty is not guaranteed.
+
+An empirical manuscript requires validated adapters, a frozen preregistration,
+complete paired model experiments, reproduced method controls, audited
+uncertainty and new scientific evidence. Passing software tests or publishing
+this repository does not satisfy those requirements.
+
+\bibliographystyle{plain}
+\bibliography{shift_references}
+\end{document}

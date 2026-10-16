@@ -1,200 +1,118 @@
-<div align="center">
+# VLAQuantShift
 
-# VLAQuantBench
+**Paired quantization-by-distribution-shift experiments for vision-language-action policies.**
 
-### Closed-Loop Evaluation of Post-Training Quantization for Vision-Language-Action Models
+A research extension of [VLAQuantBench](https://github.com/jiuyixu25/VLAQuantBench), retaining its Git history, adapters, quantizers, runners and attribution. Starting upstream commit: `4a2cb7c1bf9160ae683fe598ec583d7c9b9c13c9`. This project is independent of the upstream authors.
 
-**Jiuyi Xu**<sup>1</sup>, **Qing Jin**<sup>2</sup>, **Meida Chen**<sup>3</sup>, **Song Wang**<sup>4</sup>, **Yang Sui**<sup>5</sup>, **Yangming Shi**<sup>1</sup>
+**Status:** executable research software and a manuscript protocol draft. New measurements shipped here are synthetic integration checks. No new VLA/robot accuracy, SOTA, compression speedup, or publication-level novelty is claimed. Historical `results/` belong to the original authors and original paper.
 
-<sup>1</sup>Colorado School of Mines &nbsp;&nbsp; <sup>2</sup>Independent Researcher &nbsp;&nbsp; <sup>3</sup>University of Central Florida &nbsp;&nbsp; <sup>4</sup>University of Southern California, Institute for Creative Technologies &nbsp;&nbsp; <sup>5</sup>Microsoft AI
+한국어: 기존 코드를 출처와 함께 발전시키는 연구 저장소입니다. 핵심 질문은 **환경 변화가 있을 때 양자화의 추가 성능 손실이 얼마나 커지는가**입니다. 실제 모델 실험을 마친 논문이 아니며, 새 수치는 실행 검증용 합성 환경 결과입니다.
 
-<a href="#citation"><img src="https://img.shields.io/badge/arXiv-preprint-b31b1b.svg" alt="arXiv preprint"></a>
-<img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT">
-<img src="https://img.shields.io/badge/python-3.8%2B-3776ab.svg" alt="Python 3.8+">
+## What changes
 
-</div>
+For each task/initial state/seed, collect four outcomes:
 
-<p align="center">
-  <img src="docs/figures/overview.png" width="100%" alt="Evaluation axes of VLAQuantBench">
-</p>
+| | Clean observations | Shifted observations |
+| --- | --- | --- |
+| Released precision | FP-clean | FP-shift |
+| Quantized precision | Q-clean | Q-shift |
 
-<p align="center"><em><b>Evaluation axes of VLAQuantBench.</b> A fixed round-to-nearest quantizer anchors comparisons across numerical formats (W3 to W8A8) and quantization scopes (end-to-end, component, layer group, single projection) for four VLA models on LIBERO, SIMPLER, CALVIN and VLABench, complemented by a physical-robot study.</em></p>
+```text
+excess degradation = (FP-shift − Q-shift) − (FP-clean − Q-clean)
+```
 
-Quantization decisions for VLA policies are usually made with proxy signals — action
-error against the full-precision policy, or calibration-time activation statistics.
-VLAQuantBench measures the thing that actually matters instead: **task success when the
-quantized policy is rolled out in the simulator under the benchmark's own protocol**, and it
-tests quantized layer groups both in isolation and jointly, because the two do not agree.
+Success rates are fractions; multiply by 100 for percentage points. Positive values mean the quantization penalty increases under the specified shift. Inspect all four rates: shared catastrophic failure can yield zero interaction, and floor/ceiling effects can make negative interactions misleading as a robustness claim.
 
-Every number in the paper is reproducible from this repository. The per-episode records of
-all 417 evaluation cells (105,868 closed-loop episodes) are included, together with the
-summaries of the same-observation replay study. The paper analyzes 409 of these runs
-(94,574 episodes): everything except the seven SIMPLER variant-aggregation runs, whose
-per-variant coverage is unequal, and one superseded exclusion trial
-(`ablate-W3-e2e-no_any_fc2`). Cells include baselines and evaluation-seed repetitions, so the
-count is not a count of distinct precision assignments. Every table is regenerated from the
-records by a script — nothing is transcribed by hand — and
-[`docs/paper_map.md`](docs/paper_map.md) lists, for every table and figure of the paper, the
-result files and the script behind it.
+New code provides:
+
+- Deterministic image interventions before model preprocessing, including raw RGB alias handling without mutating simulator images.
+- Episode-identity-based seeds, calibration/evaluation index separation, calibration cache separation/content hashes, and incompatible-resume rejection in `vqb run`.
+- Validated factorial manifests with explicit coverage, stable hashes, paired comparison definitions and shell-free execution.
+- Strict four-arm analysis: missing/duplicate episodes and mismatched recipes are errors; equal-task effects and paired task-cluster bootstrap intervals are reported.
+- Offline four-action-array decomposition into direct quantization discrepancy, response to changed state/history, and interaction, including signed cross terms.
+
+These are implementation contributions. Factorial contrasts, action sensitivity, trajectory drift and robust VLA evaluation have substantial prior work; see [related work](docs/shift_related_work.md). Simulator branching and collection of crossed action arrays remain future work.
+
+## Install and verify
+
+Use the appropriate model environment following the inherited [environment scripts](scripts/env). Different VLA/simulator stacks remain incompatible. This extension requires Python 3.10+ and an editable checkout: model configurations are repository resources.
 
 ```bash
-vqb run --model pi05 --benchmark libero --suite libero_spatial --preset W4A4 --scope ah
-vqb summarize results/ --ci
-python scripts/verify_cells.py            # independent audit of every shipped cell
+git clone https://github.com/ksyint/VLAQuantShift.git
+cd VLAQuantShift
+python -m pip install -e '.[dev]'
+CUDA_VISIBLE_DEVICES='' python -m pytest -q
+CUDA_VISIBLE_DEVICES='' vqs demo --out artifacts/demo --episodes 8
 ```
 
-## What it measures
+The demo uses a small image/goal-conditioned linear controller and the **actual inherited RTN quantizer, runner, writer and new analysis**. It does not load a VLA or simulate a real robot. [Verification records](verification/README.md) describe executed checks and limits.
 
-| | |
-|---|---|
-| **Models** | OpenVLA-OFT, π0, π0.5, X-VLA (plus adapters for OpenVLA, CogACT, InternVLA-M1) |
-| **Benchmarks** | LIBERO (4 suites), SIMPLER (visual matching + variant aggregation), CALVIN ABC→D, VLABench (5 tracks) |
-| **Formats** | W2/W3/W4/W8 weight-only; W4A4, W4A6, W4A8, W8A8 with activations; per-group / per-channel, symmetric / asymmetric |
-| **Scopes** | end-to-end · one component (VE / MP / LLM / AH) · a layer group · a single named layer |
-| **Methods** | RTN anchor, plus AWQ, NF4, LLM.int8(), SmoothQuant on the LLM backbone, in both fake-quant and real-kernel paths |
-| **Scale** | 417 shipped cells / 105,868 closed-loop episodes (`results/summary.csv`); the paper analyzes 409 runs / 94,574 episodes. 200 episodes per LIBERO cell with 95% Wilson intervals (X-VLA 190); budgets and native metrics differ per benchmark (five VLABench W4A4 tracks at a documented reduced budget) |
+This distribution installs `vqs`, `vqb` and both Python packages. Use a separate environment if `vlaquantbench` is already installed: both distributions otherwise own the same import path and `vqb` entry point.
 
-## Main findings (all regenerated from the shipped records)
-
-<p align="center"><img src="docs/figures/scope_recovery.png" width="760" alt="Uncalibrated RTN W4A4 action-head interventions in pi0.5: isolated groups versus their union, and success along nested scopes with the 126-to-167-layer recovery"></p>
-
-1. **Isolated sensitivity is not compositional.** On π0.5's action head at W4A4, attention
-   alone costs 1.0 percentage points and the adaRMS modulators alone 5.5, but their 108-layer
-   union costs 97.5 (LIBERO-Spatial, baseline 99.0%; repeated on Object at three seeds).
-   X-VLA's two MLP projection groups lose 30.5 and 2.6 points separately and 72.6 jointly.
-2. **Under uncalibrated W4A4 RTN, quantizing more layers can improve success.** Expanding the
-   π0.5 subset from 126 to 167 layers raises success from 7.0% to 70.5%. Same-observation,
-   same-noise replay of 20 held-out trajectories shows the larger subset also has lower
-   action-chunk error on 217 of 219 chunks, so this is not a success-threshold artifact. The
-   recovery is carried by five small conditioning and projection layers (5.3M parameters:
-   126 + those five = 78.5%), not by the 36 gate/up projections (26.5%). It is absent at W4
-   and W4A8 (all six settings within 1.5 points of baseline) and disappears under two-episode
-   action-head calibration (union 97.5%, 126-layer subset 99.0%).
-3. **One 28,672-parameter projection carries OpenVLA-OFT's failures.** Quantizing only its
-   final action projection fc2 at W4A8 gives 18.0% while the 33.6M-parameter residual group
-   gives 99.5%, although their activation kurtosis is 834.3 versus 835.3. Keeping fc2 at
-   released precision while the other 441 eligible layers are quantized restores the W3
-   LIBERO-Long collapse (8.0% → 93.5/91.5/91.0% over three seeds) and every 8-bit-activation
-   collapse on the four suites (W4A8: 21.5/2.5/2.0/76.0% → 97.5/97.0/98.0/94.0%).
-4. **Calibration is part of the precision assignment.** The same two-episode SmoothQuant-style
-   recipe recovers π0.5 (end-to-end W4A4 0% → 91.5% at α=0.75; action head 70.5% → 98.5%),
-   lowers π0 at every scope (end-to-end 61.0% → 10.5%), and only partially recovers OFT
-   (LLM 0% → 33.0%, action head 0% → 38.5%, end-to-end 0% → 9.5%). Folding the smoothing
-   vector into 4-bit weights doubles π0's weight quantization error; it barely changes π0.5's.
-5. **Proxies need closed-loop validation.** On one held-out OFT trajectory AWQ has 1.44× lower
-   action MAE than RTN at W4 (1.15× at W3) while near-ceiling task success cannot resolve a
-   difference; task-clustered bootstrap intervals (`scripts/clustered_table.py`) show which
-   headline contrasts survive task-level clustering and which (π0 Spatial W4) do not.
-
-<p align="center"><img src="docs/figures/replay_formats.png" width="760" alt="Same-observation, same-noise replay: normalized chunk error along nested scopes at W4, W4A8 and W4A4, and the union error versus the sum of isolated errors"></p>
-
-The replay figure is the control behind findings 1 and 2: with identical observations and
-identical flow-matching noise, the 126-to-167-layer error reversal and the super-additive union
-error appear only at W4A4 (norm ratio 2.90 versus 0.80 at W4 and W4A8).
-
-## Install
-
-The four VLAs and four simulators have mutually incompatible dependency stacks, so the
-core package is installed **into each model's own environment** rather than the other way
-round. `scripts/env/` pins the upstream commit for each stack.
+## Plan and run a model study
 
 ```bash
-git clone https://github.com/jiuyixu25/VLAQuantBench && cd VLAQuantBench
-bash scripts/env/setup_pi05.sh        # creates the env, clones upstream, installs this package
-pip install -e .                      # or install into an environment you already have
+vqs plan configs/shift/libero_pilot.yaml \
+  --out artifacts/pilot-plan.json --print-commands
+vqs execute artifacts/pilot-plan.json --gpus 6,7
+vqs analyze-plan artifacts/pilot-plan.json \
+  --out artifacts/pilot-analysis.json --bootstrap 5000
 ```
 
-Pin `mujoco==3.3.2` for OpenVLA-OFT and the π models. Versions ≥3.4.0 change box–box
-collision resolution so that one LIBERO-Spatial task's stored initial state no longer settles
-into its intended configuration — the failure is invisible in aggregate and costs 3–9 suite
-points. The X-VLA environment pins MuJoCo 3.1.6, which predates the change; the version used
-is recorded in every `diagnostics/v2/*.json`. See [`docs/protocol.md`](docs/protocol.md).
+This specification expands to **48 cells / 9,600 evaluation episodes**, excluding calibration. Planning generates a manifest; execution requires the pi0.5 environment, LIBERO/assets and checkpoint. `--gpus 6,7` maps physical GPU 6 to `cuda:0` and GPU 7 to `cuda:1`; the supplied plans use one worker on `cuda:0`. Select individual cells with repeated `--job-id` arguments.
 
-## Reproducing a table
+`checkpoint: lerobot/pi05_libero_finetuned_v044` is a repository identifier, not an immutable weight revision. Before scientific collection, use a pinned local snapshot and record its hash and simulator/assets revisions. The pilot is not a complete preregistration or held-out selection/test split.
+
+Direct use of the modified original CLI:
 
 ```bash
-python scripts/verify_cells.py                 # recompute every cell from its records;
-                                               # rejects any cell whose recorded quantized-layer
-                                               # count disagrees with its declared scope
-python scripts/ablation_tables.py              # within-component decomposition
-python scripts/precision_budget.py             # per-component activation-bit budgets
-python scripts/diag_vs_damage.py               # activation statistics vs. measured damage
-python scripts/profile_kernels.py              # real-kernel latency and memory
-python scripts/action_fidelity.py record ...   # paired-observation action fidelity: record one
-python scripts/action_fidelity.py replay ...   #   full-precision episode, replay it quantized
-python scripts/replay_pi05_subsets.py record   # same-observation, same-noise replay of action-head
-python scripts/replay_pi05_subsets.py replay   #   subsets (20 held-out π0.5 trajectories): record,
-python scripts/replay_pi05_subsets.py analyze  #   replay each configuration, compose the statistics
-python scripts/replay_table.py                 # replay summary table from analysis.json
-python scripts/clustered_table.py              # task-clustered bootstrap intervals for the headline contrasts
-python scripts/calib_scope_table.py            # three-model calibration-by-scope table
-python scripts/make_summary.py                 # regenerate results/summary.csv from the records
+CUDA_VISIBLE_DEVICES=6,7 vqb run \
+  --model pi05 --benchmark libero --suite libero_spatial \
+  --checkpoint /path/to/pinned/pi05_libero --device cuda:0 \
+  --preset W4A8 --scope e2e --tasks 0,1 \
+  --episodes-from 0 --episodes 20 --seed 0 \
+  --eval-shift gaussian_noise:0.05 --calib-shift clean --shift-seed 173 \
+  --out shift_runs/pi05-w4a8-noise.jsonl
 ```
 
-Activation calibration (`vqb run --act-calib ...`) collects its statistics on init states
-starting at 20 by default (`--act-calib-from`), disjoint from the evaluation states 0–19; the
-cells collected in August 2026 used `--act-calib-from 0`, and the three-set replication in
-`results/libero/libero_spatial/pi05/calib_set*` shows the choice does not change the outcome.
-The September 2026 calibration cells (`calib_*` for π0.5, π0 and OpenVLA-OFT) use init states
-20–21. Every run header records the calibration components, episode range, seed, smoothing
-strength, clip quantile, cache tag, and code revision, and the statistics cache is keyed on all
-of them.
+`--episodes` is the **exclusive endpoint**: `--episodes-from 5 --episodes 20` requests 5–19. Every comparison needs corresponding FP/Q clean/shift files. `--eval-shift clean` enables identity-seeded execution and provenance for clean arms. Omitting it retains legacy behavior; legacy files cannot be silently mixed into paired analyses. The extension currently audits RTN runs; inherited alternative quantizers remain available through legacy `vqb`.
 
-## Results layout
+The [calibrated config](configs/shift/libero_calibrated.yaml) collects calibration on indices 20–21 and evaluates 0–19. A different calibration source needs a separate config, held fixed within each quartet. Index separation does not prove task-disjointness or detect renamed duplicate assets. Selection/test separation beyond these checks remains an explicit protocol responsibility.
 
-```
-results/<benchmark>/<suite>/<model>/<method>-<PRESET>-<scope>.jsonl
-```
+## Observation conditions
 
-Line 1 is a run header: model, checkpoint, preset, scope, method, the per-component
-quantization report (layers and parameters actually quantized), seed, git commit, host,
-GPU. Every following line is one episode: task, episode index, seed, success, steps, wall
-time, per-benchmark scalar (CALVIN subtasks, VLABench progress), policy and inference
-latency, peak VRAM. Runs are resumable and a header mismatch is refused.
-`results/summary.csv` carries one row per cell with its Wilson interval
-(`scripts/make_summary.py`). Real-kernel profiling runs (`results/latency/`), the
-paired-observation fidelity test (`results/fidelity/`), the replay-study summaries
-(`results/replay/`), and the activation diagnostics with full provenance (`diagnostics/v2/`)
-are described in [`results/README.md`](results/README.md).
+| String | Exact semantics |
+| --- | --- |
+| `clean` | Copy without corruption |
+| `brightness:0.2` | Add 0.2 × 255 to uint8 RGB, clip to [0,255] |
+| `gaussian_noise:0.05` | Gaussian pixel noise with sigma 0.05 × 255, then clip |
+| `occlusion:0.15` | Zero a random rectangle with approximately 15% image area |
+| `camera_dropout:0.2` | Independently blank each camera/call with probability 0.2 |
 
-## Evaluation-stack pitfalls
+Seeds depend on condition, task, episode, step/call and camera without consuming policy RNG. Shared-memory aliases share the intervention; unmapped or ambiguous raw RGB aliases fail explicitly. A chunked policy may consume images only when replanning. These are sensor corruptions, not physical scene/lighting changes or an official LIBERO-Plus implementation. Severity is restricted to [0,1].
 
-Three defects we hit while building this each moved measured success by more than a
-typical method delta, and each is invisible without per-task auditing:
+Episode seed alignment improves reproducibility across resume/calibration order, but does not establish identical noise at each inference call when histories or RNG consumption differ. Traces contain compact observation fingerprints and action variation, not replayable trajectories.
 
-* **Simulator physics version** — see the MuJoCo pin above.
-* **Action-chunk execution length** — a released π-family config executes 50-step chunks
-  open-loop where the protocol replans every 10; the policy looks healthy and loses 10–25
-  points.
-* **Incomplete activation hooks** — hooks that silently miss the action head report
-  weight-only behaviour for it. Because OFT's activation failure lives in one layer, a
-  2–36% outcome becomes a healthy-looking 94–96%.
+The inherited VLABench runner retains native tracks and per-task episode caps. The new analysis is binary success; native progress-score analysis, semantic-shift contrasts and real VLABench execution are not validated here. Nonzero shifted VLABench episode starts are rejected. CALVIN requires one episode per chain/task; activation calibration there is rejected until task-chain split support exists.
 
-Hook coverage is enforced in code: `quantize_modules` installs the activation hook on every
-layer it quantizes, the run header records the per-component layer counts, and results from
-the pre-fix code path are not shipped. `scripts/verify_cells.py` recomputes every cell from its
-episode records and rejects any cell whose recorded quantized-layer count disagrees with its
-declared scope. It caught a real silent failure during this study: a pattern-mismatch ablation
-that had quantized nothing and re-measured the baseline.
+## Analyze data
 
-## Adding your own
-
-* A model: [`docs/adding_a_model.md`](docs/adding_a_model.md) — implement `load`,
-  `component_map`, `reset`, `act`.
-* A benchmark: [`docs/adding_a_benchmark.md`](docs/adding_a_benchmark.md) — implement
-  `tasks`, `run_episode`, and the official metric.
-* A quantizer: apply it in place, then run any scope; the harness records what was
-  actually quantized.
-
-## Citation
-
-```bibtex
-@misc{xu2026vlaquantbench,
-  title  = {VLAQuantBench: Closed-Loop Evaluation of Post-Training Quantization for Vision-Language-Action Models},
-  author = {Xu, Jiuyi and Jin, Qing and Chen, Meida and Wang, Song and Sui, Yang and Shi, Yangming},
-  year   = {2026},
-  note   = {arXiv preprint}
-}
+```bash
+vqs analyze --fp-clean fp-clean.jsonl --q-clean q-clean.jsonl \
+  --fp-shift fp-shift.jsonl --q-shift q-shift.jsonl \
+  --bootstrap 5000 --out comparison.json
+vqs cross-replay crossed-actions.npz --out action-decomposition.json
 ```
 
-See also [`CITATION.cff`](CITATION.cff). Released under the [MIT License](LICENSE).
+NPZ keys: `fp_on_fp`, `q_on_fp`, `fp_on_q`, `q_on_q` with shape `[T,D]`, optionally positive per-dimension `scale`. Inputs must already share units, valid timesteps, histories and intended noise coupling. The analyzer verifies algebra/numerics, not how actions were collected.
+
+Task bootstrap intervals are conditional on observed episodes/calibration. Multi-seed plans return separate contrasts, not a pooled or crossed uncertainty estimate. Secondary intervals are descriptive without familywise correction. Fake-quantized accuracy runs do not establish packed storage, lower VRAM or integer-kernel acceleration.
+
+## Research and attribution
+
+- [Research plan](docs/shift_research_plan.md) and [related work](docs/shift_related_work.md)
+- [Manuscript protocol draft](paper/shift_protocol.tex) and [bibliography](paper/shift_references.bib)
+- [Upstream/change ownership](UPSTREAM.md)
+- [Original README, archived verbatim](docs/UPSTREAM_README.md) and [original citation](docs/UPSTREAM_CITATION.cff)
+
+Cite [VLAQuantBench](https://arxiv.org/abs/2609.25376) for its code, evaluation framework and historical results, together with this software version for the extension. Other motivating work is cited in the research documents. The original MIT notice remains in [LICENSE](LICENSE), with a separate copyright line for modifications.
