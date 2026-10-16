@@ -1,69 +1,140 @@
 # VLAQuantShift
 
-**Paired quantization-by-distribution-shift experiments for vision-language-action policies.**
+**환경이 달라졌을 때, VLA 모델의 양자화로 인한 성능 손실이 얼마나 더 커지는지 평가하는 연구 도구입니다.**
 
-A research extension of [VLAQuantBench](https://github.com/jiuyixu25/VLAQuantBench), retaining its Git history, adapters, quantizers, runners and attribution. Starting upstream commit: `4a2cb7c1bf9160ae683fe598ec583d7c9b9c13c9`. This project is independent of the upstream authors.
+현재 보고 있는 브랜치는 **`korean` — 한국어 안내 버전**입니다. [영문 `main` 브랜치](https://github.com/ksyint/VLAQuantShift/tree/main)도 볼 수 있습니다.
 
-**Status:** executable research software and a manuscript protocol draft. New measurements shipped here are synthetic integration checks. No new VLA/robot accuracy, SOTA, compression speedup, or publication-level novelty is claimed. Historical `results/` belong to the original authors and original paper.
+[VLAQuantBench](https://github.com/jiuyixu25/VLAQuantBench)를 기반으로 개발했습니다. 원본 코드의 Git 이력, 라이선스, 저자 인용을 유지하며, 원 연구팀과는 독립적인 프로젝트입니다.
 
-한국어: 기존 코드를 출처와 함께 발전시키는 연구 저장소입니다. 핵심 질문은 **환경 변화가 있을 때 양자화의 추가 성능 손실이 얼마나 커지는가**입니다. 실제 모델 실험을 마친 논문이 아니며, 새 수치는 실행 검증용 합성 환경 결과입니다.
+> **현재 진행 상태**
+>
+> 실험 코드, 분석 도구, 연구 계획과 논문 프로토콜 초안을 작성했습니다. 소형 합성 환경으로 실행을 검증했으며, **실제 VLA 모델의 대규모 실험과 논문 성능 결과는 아직 확보하지 않았습니다.** 기존 `results/`의 수치는 원 VLAQuantBench 연구진의 결과입니다.
 
-## What changes
+## 먼저 어디를 보면 되나요?
 
-For each task/initial state/seed, collect four outcomes:
+| 하고 싶은 일 | 읽을 문서 |
+| --- | --- |
+| 프로젝트를 이해하고 직접 실행하기 | 이 README |
+| 용어와 폴더 구조부터 이해하기 | [문서 안내와 용어 정리](docs/README.md) |
+| 논문 아이디어와 실험 설계 검토하기 | [연구 계획](docs/shift_research_plan.md) |
+| 기존 논문과 겹치는 부분 확인하기 | [관련 연구·차별성 검토](docs/shift_related_work.md) |
+| 논문 초안 읽기 | [논문 초안 안내](paper/README.md) |
+| 실제로 어디까지 검증했는지 확인하기 | [검증 기록](verification/README.md) |
+| 원본과 새 기여를 구분하기 | [출처와 수정 범위](UPSTREAM.md) |
 
-| | Clean observations | Shifted observations |
+## 핵심 아이디어
+
+밝기나 노이즈가 바뀌면 원래 모델도 성능이 떨어질 수 있습니다. 따라서 양자화한 모델의 성공률만 비교하면 **환경 변화의 영향**과 **양자화의 영향**을 구분하기 어렵습니다.
+
+같은 과제·초기 상태·난수 시드로 다음 네 조건을 실행합니다. 여기서 FP는 배포된 원래 정밀도, Q는 양자화한 정밀도를 뜻합니다.
+
+| | 원래 관측 `clean` | 변화시킨 관측 `shift` |
 | --- | --- | --- |
-| Released precision | FP-clean | FP-shift |
-| Quantized precision | Q-clean | Q-shift |
+| 원래 정밀도 FP | `FP-clean` | `FP-shift` |
+| 양자화 Q | `Q-clean` | `Q-shift` |
 
 ```text
-excess degradation = (FP-shift − Q-shift) − (FP-clean − Q-clean)
+원래 환경의 양자화 손실 = FP-clean 성공률 − Q-clean 성공률
+변화 환경의 양자화 손실 = FP-shift 성공률 − Q-shift 성공률
+
+환경 변화에 따른 추가 손실 = 변화 환경의 양자화 손실 − 원래 환경의 양자화 손실
 ```
 
-Success rates are fractions; multiply by 100 for percentage points. Positive values mean the quantization penalty increases under the specified shift. Inspect all four rates: shared catastrophic failure can yield zero interaction, and floor/ceiling effects can make negative interactions misleading as a robustness claim.
+예를 들어 **FP-clean 90%, Q-clean 88%, FP-shift 80%, Q-shift 70%**라면 양자화 손실은 2%p에서 10%p로 늘었으므로, 추가 손실은 **8%p**입니다. 이해를 위한 가상 예시이며 측정 결과가 아닙니다.
 
-New code provides:
+분석기는 성공률을 백분율이 아닌 비율로 기록합니다. 추가 손실 `0.08`은 **8%p**입니다. 추가 손실이 양수이면 해당 변화에서 양자화의 불이익이 더 커졌다는 뜻입니다. 다만 두 정책이 모두 실패하는 상황에서는 추가 손실이 작거나 음수가 될 수 있으므로, **네 조건의 성공률을 함께 확인해야 합니다.**
 
-- Deterministic image interventions before model preprocessing, including raw RGB alias handling without mutating simulator images.
-- Episode-identity-based seeds, calibration/evaluation index separation, calibration cache separation/content hashes, and incompatible-resume rejection in `vqb run`.
-- Validated factorial manifests with explicit coverage, stable hashes, paired comparison definitions and shell-free execution.
-- Strict four-arm analysis: missing/duplicate episodes and mismatched recipes are errors; equal-task effects and paired task-cluster bootstrap intervals are reported.
-- Offline four-action-array decomposition into direct quantization discrepancy, response to changed state/history, and interaction, including signed cross terms.
+이 비교식 자체를 새로운 이론으로 주장하지 않습니다. 연구의 초점은 조건과 기록을 엄격하게 맞춘 실험으로 어떤 정밀도 설정이 환경 변화에 취약한지 확인하는 것입니다.
 
-These are implementation contributions. Factorial contrasts, action sensitivity, trajectory drift and robust VLA evaluation have substantial prior work; see [related work](docs/shift_related_work.md). Simulator branching and collection of crossed action arrays remain future work.
+## 구현한 기능
 
-## Install and verify
+- **관측 변화 적용:** 밝기, 픽셀 노이즈, 가림, 카메라 누락을 모델 전처리 전에 적용합니다.
+- **재현 가능한 실행:** 에피소드별 시드와 실행 환경을 기록하고, 설정이 다른 실행 파일에 이어 쓰는 것을 막습니다.
+- **보정·평가 분리:** 보정에 쓴 에피소드와 평가 에피소드의 인덱스 중복을 검사하고, 보정 캐시를 조건별로 구분해 해시를 남깁니다.
+- **정확한 짝 비교:** 네 조건의 에피소드 누락·중복·설정 불일치를 오류로 처리합니다. 과제별 효과와 과제 단위 부트스트랩 신뢰구간을 계산합니다.
+- **행동 오차 분석:** 이미 수집한 네 행동 배열을 입력받아 양자화 오차, 상태 변화에 대한 반응, 상호작용으로 분해합니다.
 
-Use the appropriate model environment following the inherited [environment scripts](scripts/env). Different VLA/simulator stacks remain incompatible. This extension requires Python 3.10+ and an editable checkout: model configurations are repository resources.
+실제 시뮬레이터에서 상태를 복제해 네 행동 배열을 자동 수집하는 기능은 아직 구현하지 않았습니다. 현재 행동 분해 기능은 준비된 배열을 분석하는 도구입니다.
+
+## 빠르게 실행해 보기 — GPU 없이 가능
+
+Python **3.10 이상**을 사용합니다. 기존 `vlaquantbench`가 설치되어 있다면 별도 환경을 권장합니다. 두 패키지가 같은 `vlaquantbench` 경로와 `vqb` 명령을 사용하기 때문입니다.
 
 ```bash
-git clone https://github.com/ksyint/VLAQuantShift.git
+git clone --branch korean https://github.com/ksyint/VLAQuantShift.git
 cd VLAQuantShift
 python -m pip install -e '.[dev]'
+
+# CPU에서 테스트와 소형 데모 실행
 CUDA_VISIBLE_DEVICES='' python -m pytest -q
 CUDA_VISIBLE_DEVICES='' vqs demo --out artifacts/demo --episodes 8
 ```
 
-The demo uses a small image/goal-conditioned linear controller and the **actual inherited RTN quantizer, runner, writer and new analysis**. It does not load a VLA or simulate a real robot. [Verification records](verification/README.md) describe executed checks and limits.
+데모는 이미지에 위치를 표현한 작은 선형 제어기를 사용합니다. **원본의 실제 RTN 양자화 코드 → 폐루프 실행 → 결과 저장 → 새 통계 분석** 경로를 확인합니다. 학습된 VLA 모델이나 실제 로봇 실험은 아닙니다. 실행 뒤 `artifacts/demo/report.json`에서 결과를 볼 수 있습니다.
 
-This distribution installs `vqs`, `vqb` and both Python packages. Use a separate environment if `vlaquantbench` is already installed: both distributions otherwise own the same import path and `vqb` entry point.
+실제 모델을 평가하려면 모델별 환경과 시뮬레이터를 설치해야 합니다. [원본 환경 설치 스크립트](scripts/env)를 참고하세요. 모델별 의존성이 다르므로 하나의 환경에 모두 설치하는 방식은 권장하지 않습니다.
 
-## Plan and run a model study
+## 실제 모델 실험 준비하기
+
+### 1. 실행할 조건 목록 만들기
 
 ```bash
 vqs plan configs/shift/libero_pilot.yaml \
   --out artifacts/pilot-plan.json --print-commands
+```
+
+이 명령은 실행 계획 파일만 만듭니다. 기본 설정은 **48개 실험 조건 × 10개 과제 × 20개 에피소드 = 총 9,600회 평가**로 구성됩니다. 보정 실행 횟수는 별도입니다.
+
+설정의 `lerobot/pi05_libero_finetuned_v044`는 체크포인트 저장소 이름입니다. 논문용 결과를 수집하기 전에는 특정 버전의 로컬 체크포인트를 고정하고, 가중치 해시와 시뮬레이터·에셋 버전을 기록해야 합니다. 이 설정 파일만으로 모델 선택용 데이터와 최종 평가 데이터의 분리가 완성되지는 않습니다.
+
+### 2. 모델·시뮬레이터 설치 후 실행하기
+
+```bash
 vqs execute artifacts/pilot-plan.json --gpus 6,7
+```
+
+pi0.5 실행 환경, LIBERO, 시뮬레이터 에셋, 체크포인트가 필요합니다. `--gpus 6,7`을 지정하면 **물리 GPU 6 → `cuda:0`, 물리 GPU 7 → `cuda:1`**로 보입니다. 기본 설정은 `cuda:0`에서 순차 실행하므로 두 GPU를 동시에 사용하는 설정은 아닙니다. 일부 조건만 실행하려면 계획 파일의 ID를 `--job-id`로 지정합니다.
+
+### 3. 결과 분석하기
+
+```bash
 vqs analyze-plan artifacts/pilot-plan.json \
   --out artifacts/pilot-analysis.json --bootstrap 5000
 ```
 
-This specification expands to **48 cells / 9,600 evaluation episodes**, excluding calibration. Planning generates a manifest; execution requires the pi0.5 environment, LIBERO/assets and checkpoint. `--gpus 6,7` maps physical GPU 6 to `cuda:0` and GPU 7 to `cuda:1`; the supplied plans use one worker on `cuda:0`. Select individual cells with repeated `--job-id` arguments.
+필요한 결과가 빠져 있으면 분석을 중단합니다. 누락된 에피소드를 임의로 성공이나 실패로 처리하지 않습니다.
 
-`checkpoint: lerobot/pi05_libero_finetuned_v044` is a repository identifier, not an immutable weight revision. Before scientific collection, use a pinned local snapshot and record its hash and simulator/assets revisions. The pilot is not a complete preregistration or held-out selection/test split.
+## 자주 수정하는 설정
 
-Direct use of the modified original CLI:
+| 항목 | 의미 |
+| --- | --- |
+| `model`, `checkpoint` | 평가할 모델과 가중치 위치 |
+| `tasks` | 평가할 과제 ID 목록 |
+| `episodes: {start: 0, stop: 20}` | 에피소드 인덱스 0–19를 사용하며, 20은 포함하지 않음 |
+| `seeds` | 정책 실행 시드. 현재는 시드별 결과를 따로 분석 |
+| `shift_seed` | 관측 변화 생성용 시드. 정책 시드와 별개 |
+| `conditions` | `clean`과 비교할 관측 변화 목록 |
+| `preset: W4A8` | 가중치 4비트, 활성값 8비트 설정 |
+| `scope: e2e` / `ah` | 양자화 대상: 전체 대상 구성요소 / 행동 헤드 |
+| `calibration.components` | 활성값 보정 대상. 빈 목록이면 사용하지 않음 |
+
+[기본 실험 설정](configs/shift/libero_pilot.yaml)과 [보정 실험 설정](configs/shift/libero_calibrated.yaml)에 한국어 주석을 넣었습니다. 보정 설정은 **20–21번으로 보정하고 0–19번으로 평가**합니다. 보정 데이터의 출처를 바꾸면 별도의 계획 파일을 만들고, 한 번의 네 조건 비교 안에서는 같은 보정을 사용해야 합니다.
+
+## 지원하는 관측 변화
+
+| 설정값 | 동작 |
+| --- | --- |
+| `clean` | 이미지를 변화시키지 않고 복사 |
+| `brightness:0.2` | RGB에 `0.2 × 255 = 51`을 더한 뒤 0–255로 제한 |
+| `gaussian_noise:0.05` | 표준편차가 `0.05 × 255`인 가우시안 픽셀 노이즈 추가 |
+| `occlusion:0.15` | 이미지 면적의 약 15%인 직사각형 영역을 무작위 위치에서 0으로 가림 |
+| `camera_dropout:0.2` | 카메라별·호출별로 20% 확률로 이미지를 0으로 채움 |
+
+변화 강도는 0–1입니다. 이는 **모델에 입력되는 이미지의 변화**이며, 시뮬레이터의 실제 조명·물체 배치를 바꾸는 기능이나 공식 LIBERO-Plus 구현은 아닙니다. 같은 메모리를 공유하는 카메라 이미지에는 동일한 변화를 적용하고, 원본 RGB 이미지와의 대응이 불분명하면 오류를 냅니다.
+
+관측 변화는 정책의 난수 상태를 소비하지 않습니다. 다만 시드가 같다고 모든 추론 시점의 정책 노이즈까지 같다고 보장할 수는 없습니다. 행동 이력이나 난수 사용량이 달라질 수 있기 때문입니다. 여러 정책 시드에 같은 `shift_seed`를 쓰면 관측 변화의 무작위성까지 독립적으로 반복한 것도 아닙니다.
+
+## 기존 `vqb` 명령으로 직접 실행하기
 
 ```bash
 CUDA_VISIBLE_DEVICES=6,7 vqb run \
@@ -75,44 +146,40 @@ CUDA_VISIBLE_DEVICES=6,7 vqb run \
   --out shift_runs/pi05-w4a8-noise.jsonl
 ```
 
-`--episodes` is the **exclusive endpoint**: `--episodes-from 5 --episodes 20` requests 5–19. Every comparison needs corresponding FP/Q clean/shift files. `--eval-shift clean` enables identity-seeded execution and provenance for clean arms. Omitting it retains legacy behavior; legacy files cannot be silently mixed into paired analyses. The extension currently audits RTN runs; inherited alternative quantizers remain available through legacy `vqb`.
+`--checkpoint`는 실제 가중치 경로로 바꿔야 합니다. `--episodes-from 5 --episodes 20`은 **5–19번**을 실행합니다.
 
-The [calibrated config](configs/shift/libero_calibrated.yaml) collects calibration on indices 20–21 and evaluates 0–19. A different calibration source needs a separate config, held fixed within each quartet. Index separation does not prove task-disjointness or detect renamed duplicate assets. Selection/test separation beyond these checks remains an explicit protocol responsibility.
+원래 관측 조건도 **`--eval-shift clean`을 명시**해야 새 평가 방식의 시드·기록 규칙이 적용됩니다. `--eval-shift`를 생략하면 원본 방식으로 실행되며, 해당 파일을 새 짝 비교에 섞을 수 없습니다. 새 확장 경로에서 검증한 양자화 방식은 RTN입니다.
 
-## Observation conditions
-
-| String | Exact semantics |
-| --- | --- |
-| `clean` | Copy without corruption |
-| `brightness:0.2` | Add 0.2 × 255 to uint8 RGB, clip to [0,255] |
-| `gaussian_noise:0.05` | Gaussian pixel noise with sigma 0.05 × 255, then clip |
-| `occlusion:0.15` | Zero a random rectangle with approximately 15% image area |
-| `camera_dropout:0.2` | Independently blank each camera/call with probability 0.2 |
-
-Seeds depend on condition, task, episode, step/call and camera without consuming policy RNG. Shared-memory aliases share the intervention; unmapped or ambiguous raw RGB aliases fail explicitly. A chunked policy may consume images only when replanning. These are sensor corruptions, not physical scene/lighting changes or an official LIBERO-Plus implementation. Severity is restricted to [0,1].
-
-Episode seed alignment improves reproducibility across resume/calibration order, but does not establish identical noise at each inference call when histories or RNG consumption differ. Traces contain compact observation fingerprints and action variation, not replayable trajectories.
-
-The inherited VLABench runner retains native tracks and per-task episode caps. The new analysis is binary success; native progress-score analysis, semantic-shift contrasts and real VLABench execution are not validated here. Nonzero shifted VLABench episode starts are rejected. CALVIN requires one episode per chain/task; activation calibration there is rejected until task-chain split support exists.
-
-## Analyze data
+네 개의 결과 파일을 직접 분석할 수도 있습니다.
 
 ```bash
 vqs analyze --fp-clean fp-clean.jsonl --q-clean q-clean.jsonl \
   --fp-shift fp-shift.jsonl --q-shift q-shift.jsonl \
   --bootstrap 5000 --out comparison.json
-vqs cross-replay crossed-actions.npz --out action-decomposition.json
 ```
 
-NPZ keys: `fp_on_fp`, `q_on_fp`, `fp_on_q`, `q_on_q` with shape `[T,D]`, optionally positive per-dimension `scale`. Inputs must already share units, valid timesteps, histories and intended noise coupling. The analyzer verifies algebra/numerics, not how actions were collected.
+## 검증 기록과 현재 한계
 
-Task bootstrap intervals are conditional on observed episodes/calibration. Multi-seed plans return separate contrasts, not a pooled or crossed uncertainty estimate. Secondary intervals are descriptive without familywise correction. Fake-quantized accuracy runs do not establish packed storage, lower VRAM or integer-kernel acceleration.
+| 검증 항목 | 기록된 결과 |
+| --- | --- |
+| CUDA 6에서 전체 테스트 | **180개 통과** |
+| CPU 테스트 | 175개 통과, GPU 전용 5개 건너뜀 |
+| 소형 합성 환경 실행 | CPU 288회 + GPU 144회 = **432회** |
+| 원본 공개 결과의 일관성 검사 | **417개 조건 확인** — 원 연구진의 데이터 |
 
-## Research and attribution
+위 수치는 구현 커밋 `95dd37a`의 기록입니다. [검증 문서](verification/README.md)에서 원본 로그와 재계산 명령을 확인할 수 있습니다. 한국어 브랜치는 안내 문서를 정리한 버전입니다.
 
-- [Research plan](docs/shift_research_plan.md) and [related work](docs/shift_related_work.md)
-- [Manuscript protocol draft](paper/shift_protocol.tex) and [bibliography](paper/shift_references.bib)
-- [Upstream/change ownership](UPSTREAM.md)
-- [Original README, archived verbatim](docs/UPSTREAM_README.md) and [original citation](docs/UPSTREAM_CITATION.cff)
+해석할 때는 다음 범위를 구분해야 합니다.
 
-Cite [VLAQuantBench](https://arxiv.org/abs/2609.25376) for its code, evaluation framework and historical results, together with this software version for the extension. Other motivating work is cited in the research documents. The original MIT notice remains in [LICENSE](LICENSE), with a separate copyright line for modifications.
+- 양자화 수치를 부동소수점 연산으로 모사하는 **fake quantization** 결과만으로 실제 메모리 절감이나 속도 향상을 주장할 수 없습니다.
+- 현재 신뢰구간은 수집한 에피소드·보정 조건 아래에서 **과제를 다시 뽑는 방식**으로 계산합니다. 시드 전체를 합친 신뢰구간이나 다중 비교 보정은 제공하지 않습니다.
+- 에피소드 인덱스 분리는 과제 자체의 분리나 중복 에셋 검사를 대신하지 않습니다.
+- VLABench의 원본 실행기는 유지하지만, 새 확장의 실제 VLABench 실행과 진행도 지표 분석은 미검증 상태입니다. 변화 조건 실행에서는 시작 인덱스 0만 지원합니다.
+- CALVIN은 과제/행동 연쇄당 에피소드 1개만 지원합니다. 과제 연쇄 단위의 분리 기능이 없어 활성값 보정은 거부합니다.
+- 행동 배열 분해는 [문서 안내](docs/README.md)의 입력 형식을 따릅니다. 배열을 수집·정렬·검열하는 과정까지 검증하지는 않습니다.
+
+## 출처와 인용
+
+원본 코드 기준점은 `4a2cb7c1bf9160ae683fe598ec583d7c9b9c13c9`입니다. [VLAQuantBench 논문](https://arxiv.org/abs/2609.25376)을 원본 코드·평가 체계·기존 결과의 출처로 인용하고, 새 확장 기능을 사용했다면 이 저장소의 버전도 함께 명시해주세요.
+
+[MIT 라이선스](LICENSE), [원본 README](docs/UPSTREAM_README.md), [원본 인용 정보](docs/UPSTREAM_CITATION.cff)는 보존했습니다. 새 기여와 선행연구의 중복 범위는 [관련 연구 문서](docs/shift_related_work.md)에 정리했습니다.

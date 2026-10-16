@@ -1,5 +1,6 @@
-# Calibration uses indices 20-21; evaluation uses 0-19. A separate plan for each
-# calibration source keeps calibration fixed within every 2x2 contrast.
+# 20–21번 에피소드로 보정하고, 0–19번으로 평가합니다.
+# 보정 데이터의 출처별로 계획을 분리하고, 각 네 조건 비교 안에서는 같은 보정을 유지합니다.
+# 총 24개 조건 / 4,800회 평가이며 보정 실행 횟수는 별도입니다.
 schema_version: 1
 model: pi05
 checkpoint: lerobot/pi05_libero_finetuned_v044
@@ -12,11 +13,13 @@ seeds: [0, 1, 2]
 shift_seed: 173
 episodes: {start: 0, stop: 20}
 calibration:
+  # ah: 행동 헤드의 활성값 보정
   components: [ah]
   shift: clean
   start: 20
   count: 2
   tasks: 1
+  # 보정 강도와 클리핑 분위수. 평가 결과를 보고 사후 선택하지 않습니다.
   alpha: 0.5
   quantile: 0.999
 conditions: [clean, 'brightness:0.2', 'gaussian_noise:0.05', 'occlusion:0.15']

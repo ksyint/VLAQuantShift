@@ -1,66 +1,66 @@
-# VLAQuantShift research plan
+# VLAQuantShift 연구 계획
 
-Status: protocol and implementation candidate, 2026-10-16. This document specifies future scientific experiments; it does not report new VLA or robot performance. Toy fixtures establish software behavior only. Publication novelty and positive experimental results are not assumed.
+상태: 실험 프로토콜과 구현 후보를 정리한 문서(2026-10-16). 앞으로 수행할 과학적 실험을 정의하며, 새로운 VLA나 로봇의 성능 결과를 보고하지 않는다. 소형 합성 테스트 환경(toy fixture)는 소프트웨어의 동작만 검증한다. 출판 가능한 독창성이나 긍정적인 실험 결과가 이미 확보되었다고 가정하지 않는다.
 
-한국어 요약: 원 VLAQuantBench의 코드를 출처와 함께 유지하고, **양자화가 환경 변화에 대한 성능 하락을 추가로 키우는지**를 동일한 초기 조건의 네 실험으로 측정한다. 현재 목표는 재현 가능한 실험 도구와 검증 가능한 연구 가설이다. 실제 VLA 실험, 통계 검증, 기존 방법 비교를 마친 뒤에만 논문의 결과와 기여를 확정한다.
+핵심 질문은 **양자화가 환경 변화에 따른 성능 하락을 추가로 키우는가?** 이다. 원 VLAQuantBench 코드의 출처를 유지하면서, 동일한 초기 조건에서 네 가지 실험을 짝지어 이를 측정한다. 현재 목표는 재현 가능한 실험 도구와 검증 가능한 연구 가설이다. 실제 VLA 실험, 통계 검증, 기존 방법 비교를 마친 뒤에만 논문의 결과와 기여를 확정한다.
 
-## Attribution and intended contribution
+## 원본 출처와 기여 후보
 
-This repository develops [VLAQuantBench](https://github.com/jiuyixu25/VLAQuantBench), starting from upstream commit `4a2cb7c1bf9160ae683fe598ec583d7c9b9c13c9`. Its upstream code, MIT license, citation, model adapters, quantizers, evaluators, and historical results retain their attribution. Historical upstream results are evidence for the upstream paper, not new VLAQuantShift measurements. New source and records must remain identifiable through commits and explicit provenance.
+이 저장소는 [VLAQuantBench](https://github.com/jiuyixu25/VLAQuantBench)의 커밋 `4a2cb7c1bf9160ae683fe598ec583d7c9b9c13c9`에서 출발해 확장한 프로젝트다. 원본 코드, MIT 라이선스, 인용 정보, 모델 어댑터, 양자화기, 평가기, 기존 결과의 출처를 유지한다. 원본의 기존 결과는 원 논문의 근거이며, VLAQuantShift에서 새로 측정한 결과가 아니다. 새 코드와 실험 기록은 커밋과 명시적인 출처 기록을 통해 구분할 수 있어야 한다.
 
-The candidate contribution is an auditable protocol for quantization-by-shift interactions: paired outcome contrasts, calibration/evaluation separation, deterministic observation interventions, and an offline policy-by-state action decomposition. This is not a claim to have invented closed-loop PTQ evaluation, robust VLA evaluation, mixed precision, difference-in-differences, or action sensitivity. See the [overlap matrix](shift_related_work.md).
+기여 후보는 **양자화와 환경 변화의 상호작용을 추적·검증할 수 있는 실험 프로토콜**이다. 구체적으로는 동일한 에피소드끼리 짝지은 결과 비교, 보정·평가 데이터 분리, 결정론적 관측 변환, 정책과 상태를 교차 평가하는 오프라인 행동 분해를 포함한다. 학습 후 양자화(post-training quantization, PTQ)의 폐루프 평가(closed-loop evaluation), VLA 강건성 평가, 혼합 정밀도, 이중차분(difference-in-differences), 행동 민감도 자체를 새로 발명했다는 주장이 아니다. [선행연구와의 중복 검토](shift_related_work.md)를 참고한다.
 
-The main question is: **Does a precision configuration that preserves clean success also preserve robustness, and does the answer change with calibration source or action-execution horizon?** A secondary question asks whether configuration rankings based on clean action error transfer to held-out shifts. Both can yield null or negative findings.
+주 질문은 다음과 같다. **변화가 없는 환경의 성공률을 유지하는 정밀도 설정이 환경 변화에 대한 강건성도 유지하는가? 보정 데이터의 출처나 실제 행동 실행 길이에 따라 답이 달라지는가?** 보조 질문은 변화가 없는 환경의 행동 오차로 매긴 설정 순위가, 선택에 사용하지 않은 환경 변화에서도 유지되는가이다. 두 질문 모두 차이가 없거나 예상과 반대인 결과를 낼 수 있다.
 
-## Primary estimand
+## 핵심 추정 대상
 
-For one checkpoint and one quantization recipe, run four conditions on the same task and initial-state identities:
+하나의 체크포인트와 양자화 방식에 대해, 같은 태스크(과제)와 같은 초기 상태 ID로 다음 네 조건을 실행한다. 여기서 FP는 모델이 배포된 정밀도(released precision)를 뜻한다.
 
-| Condition | Policy | Observation condition |
+| 조건 | 정책 | 관측 조건 |
 | --- | --- | --- |
-| FP-clean | Released precision | Identity transform |
-| Q-clean | Quantized | Identity transform |
-| FP-shift | Released precision | Prespecified shift |
-| Q-shift | Quantized | The same shift |
+| FP-clean | 배포 정밀도 | 항등 변환(관측을 바꾸지 않음) |
+| Q-clean | 양자화 | 항등 변환 |
+| FP-shift | 배포 정밀도 | 사전에 정한 환경 변화 |
+| Q-shift | 양자화 | FP-shift와 동일한 환경 변화 |
 
-For task `j`, matched episode `i`, and binary success `Y`, define
+태스크 `j`, 짝지어진 에피소드 `i`, 성공 여부 `Y`(0 또는 1)에 대해 다음과 같이 정의한다.
 
 ```text
 e[j,i] = (Y_fp_shift - Y_q_shift) - (Y_fp_clean - Y_q_clean)
 E = mean_over_tasks(mean_over_matched_episodes(e[j,i]))
 ```
 
-Positive `E` means that the quantization penalty is larger under the shift. Report `100 * E` in percentage points, every cell's success rate, and both clean and shifted quantization penalties. Negative values are possible. A large shift failure shared by FP and Q can coexist with zero excess degradation; therefore `E` must never replace the four raw outcomes. If both shifted policies fail every episode, `E` equals the negative clean quantization penalty: an apparently favorable interaction can reflect a shared success floor rather than robustness. Clean success ceilings similarly conceal action-quality differences. Report the paired FP/Q success/failure patterns and task-level rates; do not exclude floor/ceiling tasks after observing outcomes. This factorial contrast is descriptive under the specified intervention and checkpoint, not a general causal claim about real-world disturbances.
+`E`가 양수이면 환경 변화가 있을 때 양자화로 인한 손실이 더 크다는 뜻이다. `100 * E`를 퍼센트포인트(%p)로 보고하고, 네 조건 각각의 성공률과 clean·shift 각각의 양자화 손실도 함께 제시한다. `E`는 음수일 수도 있다. 환경 변화로 FP와 Q가 모두 크게 실패하더라도 추가 손실은 0일 수 있으므로, `E`만으로 네 조건의 원래 결과를 대신해서는 안 된다. 두 shift 정책이 모든 에피소드에서 실패하면 `E`는 clean 양자화 손실의 음수가 된다. 겉으로 유리해 보이는 상호작용이 실제 강건성이 아니라 두 정책 모두 성공률 바닥에 도달한 결과일 수 있다는 뜻이다. 마찬가지로 clean 성공률이 천장에 도달하면 행동 품질의 차이가 가려질 수 있다. 짝지어진 FP/Q의 성공·실패 조합과 태스크별 성공률을 보고하며, 결과를 본 뒤 바닥·천장 효과가 있는 태스크를 제외하지 않는다. 이 요인 설계의 상호작용 대비(factorial interaction contrast)는 지정한 개입과 체크포인트에서의 차이를 기술하는 값이며, 현실의 모든 외란에 대한 일반적인 인과 주장이 아니다.
 
-Preregister one primary model/checkpoint, suite, quantizer, bit setting, shift type and severity before seeing test results. Proposed primary contrast: pi0.5 (`lerobot/pi05_libero_finetuned_v044`), LIBERO-Spatial, end-to-end RTN W4, `brightness:0.2`, evaluation seed 0, compared with released precision. This matches a cell in the executable pilot configuration. Brightness is **additive**: add `0.2 * 255` to every uint8 RGB channel, clip to `[0, 255]`, then cast to uint8; it is not a multiplicative factor. Pin the resolved checkpoint revision, selected modules, transform semantics, and suite revision before launch. Use the equal-task mean of `e` as the primary metric, with a two-sided 95% task-cluster bootstrap interval. Seeds 1 and 2 and OpenVLA-OFT replication are secondary until a joint seed analysis is prespecified and implemented. Other cells are secondary; do not choose the headline after looking at them. Change this proposal only before test execution and record the revision. An explicit Hugging Face checkpoint name in the current config is not an immutable model revision.
+테스트 결과를 보기 전에 주 분석에 사용할 모델/체크포인트, 태스크 모음(suite), 양자화기, 비트 설정, 변화 유형과 강도를 각각 하나씩 사전 등록한다. 제안하는 주 비교는 pi0.5(`lerobot/pi05_libero_finetuned_v044`), LIBERO-Spatial, 모델 전체에 적용하는 RTN W4, `brightness:0.2`, 평가 시드 0을 배포 정밀도와 비교하는 것이다. RTN은 반올림 기반 양자화(round-to-nearest), W4는 가중치 4비트를 뜻한다. 이 조합은 실행 가능한 파일럿 설정에 포함되어 있다. 밝기 변환은 **덧셈 방식**이다. uint8 RGB의 각 채널에 `0.2 * 255`를 더하고 `[0, 255]`로 잘라낸 뒤 uint8로 변환하며, 밝기에 배수를 곱하는 방식이 아니다. 실행 전에 실제로 사용되는 체크포인트 리비전, 대상 모듈, 변환의 정확한 동작, suite 리비전을 고정한다. 태스크마다 동일한 가중치를 준 `e`의 평균을 주 지표로 사용하고, 태스크 군집 부트스트랩(task-cluster bootstrap)의 양측 95% 구간을 보고한다. 시드 1·2와 OpenVLA-OFT 재현 실험은 여러 시드를 통합하는 분석을 사전 정의하고 구현하기 전까지 보조 분석으로 취급한다. 다른 조건도 보조 분석이며, 결과를 본 뒤 대표 결과를 골라서는 안 된다. 이 제안은 테스트 실행 전에만 수정하고 변경 내역을 남긴다. 현재 설정에 Hugging Face 체크포인트 이름이 명시되어 있다는 것만으로 모델 리비전이 불변으로 고정되는 것은 아니다.
 
-## Pairing and uncertainty
+## 에피소드 짝짓기와 불확실성
 
-Pair using an explicit tuple containing benchmark/suite, task ID, initial-state ID, evaluation seed, shift definition and severity, and replicate identity. Preserve all four cell values within each resampled tuple. Reject duplicate cells and fail on incomplete quartets by default; report any explicitly permitted exclusions and their causes. Never treat a missing, crashed, or unfinished episode as failure or success without a preregistered policy.
+벤치마크/suite, 태스크 ID, 초기 상태 ID, 평가 시드, 변화 정의와 강도, 반복 실험 ID를 포함하는 명시적인 튜플로 에피소드를 짝짓는다. 재표집할 때도 각 튜플의 네 조건 값을 함께 유지한다. 같은 조건의 중복 기록은 거부하며, 네 조건이 모두 갖춰지지 않으면 기본적으로 분석을 중단한다. 예외적으로 제외를 허용한 경우에는 제외 내역과 원인을 보고한다. 사전 등록한 처리 규칙 없이 누락, 충돌 종료, 미완료 에피소드를 성공이나 실패로 취급해서는 안 된다.
 
-Resample tasks with replacement, carrying their complete paired episode records, and recompute the equal-task statistic for at least 5,000 bootstrap draws using a recorded seed (`--bootstrap 5000`; the current CLI default is 2,000). The implemented analyzer resamples **tasks only**, conditional on their recorded episodes. A second stage resampling matched episode identities is a proposed extension, not current behavior. The current `analyze-plan` produces a separate contrast for each seed, without a joint multi-seed confidence interval. These intervals do not include new within-task episode sampling, calibration variation, or model-training uncertainty. Few task clusters require cautious interpretation and reporting of all task-level contrasts. A collapsed interval with one task or identical observed task effects is not evidence of population certainty.
+태스크를 복원 추출하면서 각 태스크의 짝지어진 에피소드 기록 전체를 함께 가져오고, 태스크별 동일 가중치 통계량을 다시 계산한다. 기록된 시드로 최소 5,000회 부트스트랩을 수행한다(`--bootstrap 5000`; 현재 CLI 기본값은 2,000회). 구현된 분석기는 기록된 에피소드를 고정한 채 **태스크만 재표집**한다. 태스크 안에서 짝지어진 에피소드 ID도 다시 표집하는 2단계 절차는 향후 확장안이며 현재 기능이 아니다. 현재 `analyze-plan`은 시드마다 별도의 대비값을 생성하며, 여러 시드를 통합한 신뢰구간은 제공하지 않는다. 이 구간에는 태스크 내 에피소드의 새로운 표집, 보정 데이터의 변동, 모델 학습의 불확실성이 포함되지 않는다. 태스크 군집 수가 적을 때는 해석에 주의하고 모든 태스크별 대비값을 보고해야 한다. 태스크가 하나뿐이거나 관측된 태스크별 효과가 모두 같아 구간 폭이 0이 되더라도, 모집단에 대한 불확실성이 없다는 근거가 되지 않는다.
 
-For calibrated methods, repeat calibration with at least three separately collected calibration sets. Report each calibration replicate and its task-paired interval separately, plus the spread across replicates; do not pool them as independent episodes. Current configurations reuse calibration initial states 20–21 on the first suite task, and the same `seed` controls both calibration and evaluation. Therefore the three configured seeds do not implement an independently crossed calibration-set-by-evaluation-seed experiment. Separate configuration files with distinct calibration episode ranges are needed to vary calibration sets; an independent calibration seed and crossed task-by-calibration analysis remain extensions.
+보정이 필요한 방법은 별도로 수집한 보정 데이터셋을 최소 세 개 사용해 반복한다. 각 보정 반복의 결과와 태스크를 짝지은 구간을 따로 보고하고, 반복 사이의 변동도 제시한다. 이를 서로 독립적인 에피소드처럼 합쳐서는 안 된다. 현재 설정은 suite의 첫 태스크에서 보정 초기 상태 20–21을 재사용하며, 같은 `seed`가 보정과 평가를 모두 제어한다. 따라서 설정된 세 시드는 보정 데이터셋과 평가 시드를 독립적으로 교차시킨 실험을 구현하지 않는다. 보정 데이터셋을 바꾸려면 보정 에피소드 범위가 서로 다른 설정 파일이 필요하다. 독립적인 보정 시드와 태스크·보정 반복을 교차한 분석은 향후 확장 사항이다.
 
-Matched initial states and seeds do not automatically establish matched stochastic noise. Record whether the adapter uses explicit per-step common random numbers, deterministic inference, or only an initial RNG seed. Until an adapter audit establishes stronger coupling, describe runs as matched by episode identity and seed. Differences in random-number consumption, caches, reset behavior, and early stopping can weaken coupling.
+초기 상태와 시드가 같다고 확률적 잡음까지 자동으로 맞춰지는 것은 아니다. 어댑터가 각 스텝에서 명시적인 공통 난수(common random numbers)를 사용하는지, 결정론적 추론을 하는지, 초기 난수 생성기(RNG) 시드만 맞추는지 기록한다. 어댑터 검토를 통해 더 강한 난수 대응 관계가 확인되기 전에는 실행을 “에피소드 ID와 시드가 일치하는 실행”으로 설명한다. 난수 소비량, 캐시, 초기화 동작, 조기 종료의 차이로 대응 관계가 약해질 수 있다.
 
-The implemented corruption RNG is derived separately from `shift_seed`, task/episode identity, control step, camera and shift definition. The sample plans hold `shift_seed` fixed across evaluation seeds. Thus those seeds repeat policy randomness under a fixed corruption schedule, not independent corruption realizations. Severity-specific seeds also do not guarantee nested masks/noise across severity levels. Claims about a distribution of corruptions need separately prespecified shift-seed replication.
+구현된 관측 손상(corruption)의 RNG는 `shift_seed`, 태스크/에피소드 ID, 제어 스텝, 카메라, 변화 정의에서 별도로 도출된다. 예제 실행 계획은 평가 시드를 바꿔도 `shift_seed`를 고정한다. 따라서 이 시드들은 고정된 관측 손상 스케줄 아래에서 정책의 무작위성을 반복하며, 서로 독립적인 관측 손상 표본을 만들지 않는다. 강도별 시드도 강도가 높아질수록 기존 마스크나 잡음에 변화가 누적되는 구조를 보장하지 않는다. 관측 손상의 분포에 관한 주장을 하려면 `shift_seed` 반복 실험을 별도로 사전 정의해야 한다.
 
-## Calibration, selection, and evaluation splits
+## 보정·선택·평가 데이터 분리
 
-The final scientific study requires three immutable manifests:
+최종 연구에는 변경할 수 없도록 고정한 세 가지 데이터 명세(manifest)가 필요하다.
 
-1. **Calibration:** observations used to fit clipping, smoothing, or quantizer parameters. Record source policy, task IDs, episode IDs, shift conditions, collection seed, and data digest.
-2. **Selection:** tasks and episodes used to choose bit budgets, protected modules, shift thresholds, or a precision configuration.
-3. **Evaluation:** untouched task/episode identities and prespecified shifts used for the reported estimates.
+1. **보정(calibration):** 클리핑, 스무딩, 양자화기 파라미터를 맞추는 데 사용하는 관측 데이터다. 데이터를 수집한 정책, 태스크 ID, 에피소드 ID, 변화 조건, 수집 시드, 데이터 해시를 기록한다.
+2. **선택(selection):** 비트 예산, 양자화에서 보호할 모듈, 변화 임계값, 정밀도 설정을 고르는 데 사용하는 태스크와 에피소드다.
+3. **평가(evaluation):** 보고할 추정값을 계산하는 데 사용하는, 앞선 단계에서 전혀 사용하지 않은 태스크/에피소드 ID와 사전 정의된 변화 조건이다.
 
-Disallow episode overlap between all roles. For claims about task transfer, also require task-disjoint splits; holding out only initial-state indices supports episode generalization, not unseen-task generalization. Suite labels alone do not establish disjointness. Preserve asset/task identity across renamed tasks and transformed views of the same episode. **Current enforcement is narrower:** the plan/runner rejects overlapping calibration/evaluation episode-index ranges; it does not implement three-role manifests, a selection split, task-disjointness, or renamed-asset identity checks. These are protocol requirements to implement or audit externally before a final study, not completed capabilities.
+어떤 역할 사이에서도 에피소드가 겹치면 안 된다. 새로운 태스크로의 전이를 주장하려면 태스크도 서로 겹치지 않아야 한다. 초기 상태 인덱스만 분리하면 새 에피소드에 대한 일반화는 평가할 수 있지만, 보지 못한 태스크에 대한 일반화를 뒷받침하지는 못한다. suite 이름이 다르다는 사실만으로 데이터가 분리되었다고 볼 수 없다. 이름이 바뀐 태스크나 같은 에피소드를 변환한 관측에서도 원래 에셋과 태스크의 식별 정보를 유지한다. **현재 코드가 강제하는 범위는 더 좁다.** 실행 계획/실행기는 보정·평가 에피소드 인덱스 범위의 중복을 거부하지만, 세 역할의 manifest, 선택 데이터 분할, 태스크 단위 분리, 이름이 바뀐 에셋의 동일성 검사를 구현하지 않는다. 이는 최종 연구 전에 구현하거나 외부 절차로 검토해야 할 프로토콜 요건이며, 완료된 기능이 아니다.
 
-Freeze quantizer parameters after calibration. Use identical frozen parameters in Q-clean and Q-shift when estimating zero-shot robustness. The cache key includes calibration condition and execution settings, while evaluation condition is intentionally excluded. The extension records and compares the SHA256 of calibration cache contents. Matching cache metadata/digests does not verify immutable checkpoint weights; final experiments must also retain and verify checkpoint artifact digests. Recalibration on shifted observations is a distinct adaptation arm with a separately recorded calibration budget. Current collection uses an unquantized policy and one calibration observation transform per plan; mixing calibration sources or collecting on-policy quantized states requires additional implementation. Never update scales or choose precision on evaluation observations unless the protocol explicitly labels a test-time adaptation method and constrains its resources.
+보정 후에는 양자화기 파라미터를 고정한다. 추가 적응 없이 강건성을 평가하는 제로샷(zero-shot) 실험에서는 Q-clean과 Q-shift에 동일하게 고정된 파라미터를 사용한다. 캐시 키에는 보정 조건과 실행 설정을 넣고, 평가 조건은 의도적으로 제외한다. 이 확장 코드는 보정 캐시 내용의 SHA256을 기록하고 비교한다. 캐시 메타데이터/해시가 같다고 체크포인트 가중치의 불변성까지 검증되는 것은 아니므로, 최종 실험에서는 체크포인트 파일의 해시도 보존하고 검증해야 한다. 변화가 적용된 관측으로 다시 보정하는 것은 별도의 적응 실험 조건이며 보정 예산을 따로 기록한다. 현재 데이터 수집은 양자화하지 않은 정책과 실행 계획당 하나의 보정 관측 변환을 사용한다. 여러 보정 출처를 섞거나, 양자화 정책이 직접 방문한 상태(on-policy state)를 수집하려면 추가 구현이 필요하다. 평가 시점 적응(test-time adaptation) 방법이라고 프로토콜에 명시하고 자원 사용을 제한한 경우가 아니라면, 평가 관측으로 스케일을 갱신하거나 정밀도를 선택해서는 안 된다.
 
-## Action diagnostics: offline first
+## 행동 진단: 우선 오프라인 분석
 
-Let `s_f` and `s_q` denote paired FP and quantized histories/states at the same control index. Evaluate four action arrays using matched inference randomness and explicitly controlled policy memory:
+`s_f`와 `s_q`는 같은 제어 인덱스에서 짝지어진 FP·양자화 정책의 이력/상태다. 추론의 무작위성을 맞추고 정책 메모리를 명시적으로 제어한 상태에서 다음 네 행동 배열을 평가한다.
 
 ```text
 a_ff = pi_fp(s_f)       a_qf = pi_q(s_f)
@@ -71,47 +71,47 @@ I = a_qq - a_fq - a_qf + a_ff
 T = a_qq - a_ff = D + S + I
 ```
 
-`D` is quantization discrepancy on the reference history, `S` is the FP response to the different history, and `I` is the policy-by-history interaction. This is an exact algebraic decomposition. The first release analyzes supplied arrays; **it does not implement simulator snapshot/restore or collect these crossed evaluations from real VLA rollouts**. Correct cross evaluation will require an adapter-specific treatment of recurrent state, action queues, visual history, noise, action normalization, and chunk execution.
+`D`는 기준 이력에서의 양자화 차이, `S`는 다른 이력에 대한 FP 정책의 반응 차이, `I`는 정책과 이력의 상호작용이다. 이 분해는 정확한 대수적 항등식이다. 첫 릴리스는 입력으로 주어진 배열을 분석하며, **시뮬레이터 상태 저장/복원이나 실제 VLA rollout에서 이 교차 평가 데이터를 수집하는 기능은 구현하지 않는다.** 올바르게 교차 평가하려면 순환 상태, 행동 큐, 시각 이력, 잡음, 행동 정규화, 행동 청크 실행을 어댑터별로 처리해야 한다. 행동 청크(action chunk)는 모델이 한 번에 예측하는 여러 스텝의 행동 묶음이다.
 
-Validate vector closure and report norms with signed inner-product terms, since `||T||` is not `||D|| + ||S|| + ||I||`. Compare only common valid timesteps and record the number omitted after either trajectory terminates. The current analyzer accepts four finite `T × D` arrays of equal shape and optional dimension scales; the caller must perform alignment, censoring, episode grouping and calibration-only scale fitting. It does not collect or verify this provenance. Do not zero-pad terminated trajectories, treat timesteps as independent episodes, or infer physical damage from an action norm. Define translation, rotation and gripper units before aggregating dimensions. Any normalization must be fitted on calibration data and then frozen.
+벡터 수준에서 `T = D + S + I`가 성립하는지 검증하고, 노름과 함께 부호를 유지한 내적 항을 보고한다. `||T||`는 `||D|| + ||S|| + ||I||`와 같지 않기 때문이다. 두 궤적에서 모두 유효한 공통 시점만 비교하고, 어느 한 궤적이 종료된 뒤 제외한 시점 수를 기록한다. 현재 분석기는 모양이 같고 모든 원소가 유한한 네 개의 `T × D` 배열과 선택적인 차원별 스케일을 받는다. 시점 정렬, 종료 이후 관측의 제외, 에피소드 그룹화, 보정 데이터만을 사용한 스케일 추정은 호출자가 수행해야 한다. 분석기가 이 처리 과정의 출처를 수집하거나 검증하지는 않는다. 종료된 궤적을 0으로 채우거나, 시점을 독립적인 에피소드처럼 취급하거나, 행동 노름에서 물리적 손상을 추론해서는 안 된다. 차원들을 합산하기 전에 이동·회전·그리퍼의 단위를 정의한다. 모든 정규화는 보정 데이터에서 추정한 뒤 고정해야 한다.
 
-## Planned experiment matrix
+## 계획한 실험 범위
 
-| Axis | Initial scientific study | Expansion after validation |
+| 실험 축 | 초기 연구 | 검증 이후 확장 |
 | --- | --- | --- |
-| Models | OpenVLA-OFT and pi0.5, pinned released checkpoints | X-VLA or another architecture |
-| Suites | LIBERO-Spatial and LIBERO-Long, checkpoint/task identities explicit | VLABench task-progress evaluation; keep its metric separate |
-| Precision | FP, RTN W4, W4A8; one protected-output configuration | Matched available VLA PTQ methods after reproduction |
-| Shifts | Implemented identity, additive brightness, seeded Gaussian noise, rectangle occlusion and camera dropout; one primary severity | Contrast, prespecified severity sweeps and official LIBERO-Plus scene perturbations |
-| Calibration | None for RTN; separate plans for disjoint calibration replicates using one clean or shifted FP collection source | Independent calibration/evaluation seeds and mixed-source calibration at equal sample budgets |
-| Execution | Released action-chunk convention held fixed | Prespecified execution-chunk ablation |
-| Replication | At least 20 initial states per held-out task and 3 evaluation seeds if affordable | Increase using an external pilot's precision/power calculation |
+| 모델 | OpenVLA-OFT와 pi0.5, 배포 체크포인트 고정 | X-VLA 또는 다른 아키텍처 |
+| Suite | LIBERO-Spatial과 LIBERO-Long, 체크포인트/태스크 식별 정보 명시 | VLABench의 태스크 진행도 평가. 기존 지표와 분리해 보고 |
+| 정밀도 | FP, RTN W4, W4A8(가중치 4비트·활성값 8비트), 출력 모듈을 보호하는 설정 하나 | 기존 VLA PTQ 방법을 재현한 뒤 같은 조건으로 비교 |
+| 환경 변화 | 구현된 항등 변환, 덧셈식 밝기, 시드를 지정한 가우시안 잡음, 직사각형 가림, 카메라 드롭아웃. 주 분석 강도 하나 지정 | 대비 변환, 사전 정의된 여러 강도, 공식 LIBERO-Plus 장면 변화 |
+| 보정 | RTN은 없음. 중복 없는 보정 반복마다 별도 계획을 사용하고, clean 또는 shift FP 수집 출처 하나를 지정 | 보정·평가 시드의 독립화, 같은 표본 예산의 혼합 출처 보정 |
+| 실행 | 배포 모델의 행동 청크 실행 규칙 고정 | 사전 정의된 실제 실행 청크 길이 비교 |
+| 반복 | 예산이 허용하면 평가용으로 분리한 태스크마다 초기 상태 최소 20개, 평가 시드 3개 | 별도 파일럿의 정밀도/검정력 계산에 따라 확대 |
 
-The numerical budgets above are planning targets, not achieved coverage or a power guarantee. Shared initial conditions across seeds are repeated measures. Hold out entire tasks for selection; preregister eligible tasks and whether within-suite test means cover only that held-out subset. The shipped pilot lists all ten Spatial tasks for convenient coverage testing; before collecting a scientific pilot, restrict it to tasks separate from the final test set. A small pilot uses separate tasks and never contributes to final estimates.
+위 수치는 계획 목표이며, 달성한 실험 범위나 검정력의 보장이 아니다. 여러 시드에서 같은 초기 조건을 쓰면 반복 측정에 해당한다. 설정 선택용 태스크는 최종 평가 태스크와 통째로 분리하고, 사용할 수 있는 태스크와 suite 내 테스트 평균이 그 평가용 부분집합만 포함하는지를 사전 등록한다. 배포된 파일럿에는 실행 범위 점검을 편하게 할 수 있도록 Spatial 태스크 10개가 모두 들어 있다. 연구용 파일럿 데이터를 수집하기 전에는 최종 테스트와 겹치지 않는 태스크만 남겨야 한다. 소규모 파일럿은 별도 태스크에서 수행하며 최종 추정값에 포함하지 않는다.
 
-Apply observation transforms at a documented boundary before policy preprocessing to all intended camera streams. Record value range, dtype, clipping, stochastic seed derivation, and transform order. An image brightness transform is an observation corruption; it is not physically equivalent to changing simulator lighting. The first release's transforms are not an official LIBERO-Plus reproduction. Actual scene perturbations require a separately pinned integration.
+관측 변환은 정책 전처리 이전의 명시된 지점에서, 적용 대상으로 정한 모든 카메라 스트림에 수행한다. 값 범위, 데이터형(dtype), 클리핑, 확률적 시드 도출 방식, 변환 순서를 기록한다. 이미지 밝기 변환은 관측 손상이며, 시뮬레이터의 조명을 물리적으로 바꾸는 것과 같지 않다. 첫 릴리스의 변환은 공식 LIBERO-Plus 재현이 아니다. 실제 장면 변화를 사용하려면 버전을 별도로 고정한 연동이 필요하다.
 
-Use inherited runners only when their reset, episode identity, action normalization, and task metrics are verified. Keep the FP and Q branches' environment settings identical. Fake quantization establishes accuracy effects; theoretical bit counts are not measured VRAM, packed storage, or acceleration. Report actual device/runtime measurements separately if implemented. On this workstation, any GPU execution is restricted to CUDA devices 6 and 7.
+원본에서 가져온 실행기는 초기화 동작, 에피소드 식별 정보, 행동 정규화, 태스크 지표를 검증한 뒤 사용한다. FP·Q 실행 경로의 환경 설정은 같게 유지한다. 모의 양자화(fake quantization)는 정확도에 미치는 영향을 확인하는 수단이다. 이론상 비트 수는 실제 VRAM, 비트 단위로 압축한 저장 크기, 가속 효과를 측정한 값이 아니다. 실제 장치/실행 시간 측정을 구현했다면 별도로 보고한다. 이 워크스테이션에서는 모든 GPU 실행을 CUDA 장치 6과 7로 제한한다.
 
-## Required ablations and decision rules
+## 필요한 통제 실험과 판단 규칙
 
-- **Zero-shift control:** identity versus identity should give a zero interaction under deterministic, identical execution; any residual motivates a coupling audit.
-- **No-quantization control:** independently executed FP arms test reset/RNG reproducibility rather than quantization.
-- **Pairing control:** compare paired and unpaired uncertainty only as an analysis audit; use the preregistered paired estimate for claims.
-- **Calibration budget:** vary source while keeping examples, collection cost and quantizer recipe fixed. Distinguish source shift from quantity.
-- **Scope control:** compare uniform RTN with protected output modules. A selector based on action MSE is a reference baseline, not a new QVLA-like method claim.
-- **Horizon control:** change executed action count separately from predicted chunk length, keeping the checkpoint fixed.
-- **Shift control:** vary severity and camera coverage without selecting the best-looking settings after evaluation.
+- **변화 없음 통제:** 항등 변환끼리 비교하면 결정론적이고 동일한 실행에서 상호작용은 0이어야 한다. 잔차가 있으면 실행 간 난수 대응 관계를 검토한다.
+- **양자화 없음 통제:** FP 조건들을 독립적으로 실행해 양자화 효과가 아닌 초기화/RNG의 재현성을 점검한다.
+- **짝짓기 통제:** 짝지은 분석과 짝짓지 않은 분석의 불확실성 비교는 분석 점검에만 사용한다. 논문의 주장은 사전 등록한 짝지은 추정값에 근거한다.
+- **보정 예산 통제:** 예제 수, 수집 비용, 양자화 방식을 고정한 채 출처를 바꾼다. 출처 변화와 데이터 양의 효과를 구분한다.
+- **양자화 범위 통제:** 균일한 RTN과 출력 모듈을 보호한 설정을 비교한다. 행동 평균제곱오차(MSE) 기반 정밀도 선택기는 비교 기준이며, 새로운 QVLA류 방법이라는 주장의 근거가 아니다.
+- **실행 길이 통제:** 체크포인트를 고정하고, 예측 청크 길이와 별개로 실제 실행하는 행동 수를 바꾼다.
+- **환경 변화 통제:** 강도와 적용 카메라 범위를 바꾸되, 평가 후 결과가 좋아 보이는 설정만 고르지 않는다.
 
-Report null results and reversals. Do not interpret an interval containing zero as equivalence; a future equivalence claim needs a prespecified tolerance and corresponding test. Multiple secondary contrasts require either multiplicity-aware inference or explicit descriptive labeling.
+차이가 없는 결과와 방향이 뒤집힌 결과도 보고한다. 구간에 0이 포함된다고 동등하다고 해석해서는 안 된다. 향후 동등성 주장을 하려면 허용 오차와 그에 맞는 검정을 사전 정의해야 한다. 여러 보조 대비값은 다중 비교를 고려해 추론하거나, 추론이 아닌 기술통계 수준의 분석임을 명확히 표시해야 한다.
 
-## Staged completion criteria
+## 단계별 완료 기준
 
-1. **Instrument:** pass toy fixtures for pairing, incomplete-cell rejection, split leakage, identity transforms, action-decomposition closure and reproducible summaries. These are software checks.
-2. **Adapter pilot:** run released FP and a small RTN condition on separate pilot tasks; verify transforms, module coverage, initial states, seed behavior and logs. Record download/runtime blockers.
-3. **Freeze:** commit the full preregistration, hashes and manifests before final test collection. Select the target precision budget using selection data only.
-4. **Collect:** execute all four cells for every retained identity and independent calibration replicate. Save raw records and failures; resume without duplicate episodes.
-5. **Analyze:** generate the primary estimate, task-level distribution, all four raw success rates and audited secondary contrasts from immutable logs.
-6. **Write:** replace pending manuscript cells only with traceable measurements. Recheck related work, especially PIVOT-Q and DA-PTQ, and state any unresolved novelty overlap.
+1. **도구 검증:** 에피소드 짝짓기, 불완전한 네 조건 기록의 거부, 분할 간 데이터 누수, 항등 변환, 행동 분해 항등식, 요약 결과의 재현성을 합성 데이터로 검증한다. 이는 소프트웨어 검사다.
+2. **어댑터 파일럿:** 별도 파일럿 태스크에서 배포 FP와 소규모 RTN 조건을 실행한다. 변환, 적용 모듈 범위, 초기 상태, 시드 동작, 로그를 검증한다. 다운로드/실행을 막는 문제를 기록한다.
+3. **고정:** 최종 테스트 수집 전에 전체 사전 등록 내용, 해시, manifest를 커밋한다. 목표 정밀도 예산은 선택 데이터만으로 결정한다.
+4. **수집:** 유지하기로 한 모든 에피소드 ID와 독립적인 보정 반복에 대해 네 조건을 모두 실행한다. 원시 기록과 실패 내역을 저장하고, 재개 시 에피소드가 중복되지 않게 한다.
+5. **분석:** 변경 불가능하게 보존한 로그에서 주 추정값, 태스크별 분포, 네 조건 각각의 원래 성공률, 검토를 마친 보조 대비값을 생성한다.
+6. **논문 작성:** 원고의 미측정 항목은 출처를 추적할 수 있는 측정값으로만 채운다. 특히 PIVOT-Q와 DA-PTQ를 포함해 선행연구를 다시 확인하고, 독창성의 중복 문제가 남아 있다면 명시한다.
 
-The accompanying [manuscript](../paper/shift_protocol.tex) is a protocol draft. It becomes an empirical paper only after these stages establish a substantive finding beyond the existing literature.
+함께 제공하는 [논문 원고](../paper/shift_protocol.tex)는 프로토콜 초안이다. 위 단계를 통해 기존 문헌을 넘어서는 실질적인 발견이 확인된 뒤에야 실증 논문이 될 수 있다.

@@ -1,16 +1,20 @@
-# Executable pilot specification; no corresponding real-model results are claimed.
+# 기본 실험 계획: 이 설정으로 실제 VLA 결과를 수집한 상태는 아닙니다.
+# 48개 조건 × 10개 과제 × 20개 에피소드 = 총 9,600회 평가
 schema_version: 1
 model: pi05
 checkpoint: lerobot/pi05_libero_finetuned_v044
 benchmark: libero
 suite: libero_spatial
 dtype: bf16
+# --gpus 6,7로 실행하면 cuda:0은 물리 GPU 6을 가리킵니다.
 device: cuda:0
 tasks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 seeds: [0, 1, 2]
 shift_seed: 173
+# stop은 포함하지 않으므로 0–19번을 평가합니다.
 episodes: {start: 0, stop: 20}
 calibration:
+  # 빈 목록: 이 계획에서는 활성값 보정을 사용하지 않습니다.
   components: []
   shift: clean
   start: 20
